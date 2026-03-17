@@ -1,87 +1,82 @@
 # Tenjin'ya (天神屋) — Innovative Japanese Language Learning
 
-Tenjin'ya is an advanced language learning application designed to provide a comprehensive and immersive path to Japanese fluency. By focusing on the foundational elements of the language—starting with its unique writing systems—and integrating cultural context, Tenjin'ya bridges the gap between mechanical memorization and true linguistic comprehension.
+Tenjin'ya is an advanced language learning application initially designed for learning Japanese, with a high potential to be expanded to more languages. Unlike common platforms, Tenjin'ya provides a comprehensive and immersive path to fluency by focusing on the foundational elements of the language—starting with its unique writing systems—and integrating deep cultural context. We bridge the gap between mechanical memorization and true linguistic comprehension.
 
 ---
 
 ## 🎨 Concept & Philosophy
 
-Through testing and analysis of existing platforms like Duolingo, HelloTalk, and Shinobi, Tenjin'ya identifies and addresses three critical limitations in modern language learning apps:
+Through testing, analysis of existing apps, and research into platforms such as **Duolingo**, **HelloTalk**, and **Shinobi**, three main limitations were identified that Tenjin'ya improves upon:
 
 ### 1. Writing System Mastery (Hiragana, Katakana, Kanji)
-Most apps skip the arduous task of teaching characters, forcing learners to jump directly into vocabulary using Latin transliterations (Romaji). Tenjin'ya prioritizes **Character Mastery**. It provides dedicated modules to visualize, practice, and recognize Hiragana, Katakana, and Kanji before moving to advanced grammar. We believe that a strong foundation in the writing system is essential for efficient long-term acquisition.
+The core reason Japanese was chosen as our starting language is because it contains non-Latin writing systems that require comprehension before grammar or vocabulary. Most popular apps skip this arduous task, jumping directly into words written in Latin transliterations (Romaji) or dialysis without a proper base. 
+**Our Solution:** Tenjin'ya adds a vital piece missing from generic apps. We provide basic courses to visualize and practice the characters of **Hiragana**, **Katakana**, and **Kanji**. We include recognition tests to confirm a learner’s understanding before they move to advanced grammar.
 
 ### 2. Achievement-Based Motivation vs. Toxic Competition
-Many apps use "streaks" and competitive leaderboards that eventually pressure users to "cheat" the system for points rather than focusing on learning. 
-Tenjin'ya introduces a **Personal Achievement System**. Instead of competing against others, users unlock unique achievements by completing missions and mastering chapters at their own pace. This maintains high engagement through personal growth rather than stressful comparison.
+Many apps create a competitive environment where users eventually focus more on gathering points or "streaks" than actually learning. This often leads to users exploiting the system for rewards, reducing the platform's educational value.
+**Our Solution:** Tenjin'ya introduces a different motivational mechanism based on **individual achievements**. Instead of competing directly against others through rankings or leaderboards, users unlock missions and improve skills in different chapters. We keep competition healthy; users can visualize others' achievements, but the focus remains on personal goals rather than direct comparison.
 
-### 3. Cultural Context & Nuance
-Language does not exist in a vacuum. Most apps neglect the cultural nuances that dictate how Japanese is actually spoken—such as honorifics and social hierarchy. Tenjin'ya includes **Interactive Cultural Learning Modules** that explain the "why" behind expressions, helping learners communicate appropriately in real-world Japanese society.
+### 3. Cultural Context & Interactive Learning
+Modern language apps often lack a correlation to culture, neglecting the social context of speech. In Japanese, certain expressions must be adapted based on social context, age, or hierarchy.
+**Our Solution:** Tenjin'ya implements an **interactive cultural learning module**. This help learners understand the society in which the language is used, ensuring they communicate appropriately and with nuance.
 
 ---
 
 ## 🏗️ Technical Architecture
 
+Tenjin'ya aims not only to explore existing app abilities but to bring innovation through a well-crafted aesthetic and modern tech stack.
+
 ### **The Backend: FastAPI & Uvicorn**
-Tenjin'ya is powered by **FastAPI**, a modern, high-performance Python web framework. 
-- **Asynchronous Processing:** Built on the **ASGI** standard, FastAPI handles multiple requests concurrently, ensuring a snappy user experience.
-- **Automatic Documentation:** Provides interactive API docs (Swagger/OpenAPI) at `/docs` for seamless testing.
-- **Uvicorn:** A lightning-fast ASGI server that hosts the application and handles communication between the app and the web.
+The `main.py` file represents the application's entry point, initializing and configuring the **FastAPI** server. 
+- **FastAPI:** A modern, high-performance web framework using Python type hints for automatic validation and interactive API documentation (accessible at `/docs`).
+- **ASGI Standard:** FastAPI is based on the Asynchronous Server Gateway Interface, designed to handle multiple requests simultaneously for high efficiency.
+- **Uvicorn:** A lightweight, high-performance ASGI server that executes the app on `127.0.0.1:8000`.
+- **Static Resources:** Images, audio, icons, textures, and videos are served via the `StaticFiles` module, mounted to specific paths (e.g., `/audio`, `/images`) for accessibility by the frontend.
 
 ### **Database Strategy: Supabase & PostgreSQL**
-Rather than a local file, Tenjin'ya utilizes a cloud-hosted **PostgreSQL** database managed by **Supabase**.
-- **PostgreSQL:** An industry-standard relational database (RDBMS) known for its reliability, concurrency control, and support for complex data types.
-- **Cloud Hosting:** By using Supabase, the data is accessible, secure, and independent of local hardware.
+Our core data infrastructure utilizes the **Supabase** platform to host a **PostgreSQL** database. 
+- **PostgreSQL:** An industry-standard Relational Database Management System (RDBMS) supporting SQL, concurrency control, and diverse data types.
+- **Cloud Hosting:** The database runs on Supabase's cloud servers rather than locally, offering superior scalability and API integration.
 
 ### **Data Layer: SQLAlchemy ORM**
-The application uses **SQLAlchemy** as an Object-Relational Mapping (ORM) layer.
-- **Abstraction:** Database tables are defined as Python classes, allowing us to perform operations using clean Python code instead of raw SQL.
-- **Security:** Built-in protection against SQL injection and improved maintainability.
+To interact with the database efficiently, we use **SQLAlchemy**, a Python Object-Relational Mapping (ORM) library. This acts as an abstraction layer:
+- **Python Classes:** Database tables are defined as Python classes mapping directly to the DB.
+- **Readability & Security:** It improves maintainability and prevents SQL injection by translating Python expressions into SQL commands.
+- **`database.py` Breakdown:**
+  - `Sessionmaker`: Creates new sessions for requests.
+  - `get_db()`: Manages session lifecycle for each request.
+  - `create_engine`: Uses the Supabase URL to connect to the database.
+  - `declarative_base()`: Maps Python classes to PostgreSQL tables.
 
 ---
 
-## 📂 Project Structure (Feature-Based)
+## 📂 Innovation: Grammar vs. Vocabulary Modules
 
-The codebase follows a modular **Feature-Based Architecture**, making it easy to extend for new languages or modules:
-
-- **`core/`**: Central application logic, database connection handling (`database.py`), and foundational settings.
-- **`features/`**:
-  - **`grammar/`**: Routes and logic for the curriculum, including the horizontal "Belt" navigation system.
-  - **`customization/`**: User profile management, avatar uploads, and achievement tracking.
-- **`static/`**: Centralized storage for multimedia assets including:
-  - `/images` & `/textures`: High-quality UI elements and backgrounds.
-  - `/audio`: Native pronunciation guides.
-  - `/videos`: Character stroke animations (e.g., the running fox transitions).
+Most apps pick basic words and cycle them to teach grammar. Without auxiliary book support, users lack the choice to learn conversational vocabulary.
+**Tenjin'ya's Solution:** We separated the logic into two distinct modules:
+1. **Grammar Module:** Focuses on particles, verb endings, and sentence structure.
+2. **Vocabulary Module:** Allows users to learn words outside the grammar scope.
+Users can learn specific vocabulary for each chapter and then apply those connections more efficiently within the grammar section. This dual-pathway ensures you have the necessary "tools" (words) before you try to build the "house" (sentences).
 
 ---
 
 ## 🚀 Getting Started
 
-### **Prerequisites**
-- Python 3.12+
-- Virtual environment (`.venv`)
-
-### **Execution**
-To start the application locally:
+### **Startup**
+The database schema is initialized automatically via `Base.metadata.create_all(bind=engine)`, creating tables if they do not exist.
+To run the server locally:
 ```bash
-# Activate your environment
-.venv\Scripts\activate
-
-# Run the server
-python -m uvicorn main:app --port 8000 --reload
+.venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload
 ```
-The app will be available at `http://127.0.0.1:8000`.
 
 ---
 
-## 📚 References
+## 📚 References & Research
 
-The development of Tenjin'ya was informed by key research in Mobile Assisted Language Learning (MALL) and Gamification:
+Our improvements were driven by observations of modern language trends—such as the massive rise in Chinese and Japanese speakers in 2025—and studies on effective acquisition:
 
-- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning: From content delivery to supported collaboration and interaction.* ReCALL Journal.
-- **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.* Proceedings of the 15th International Academic MindTrek Conference.
-- **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.* City University of New York.
+- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.
+- **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
+- **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
 
----
-
-*“Evolution and justification through well-crafted aesthetics — Tenjin'ya is about helping people achieve the linguistic results they actually want.”*
+*“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
