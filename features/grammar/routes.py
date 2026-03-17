@@ -1,0 +1,2686 @@
+"""Course routes — welcome page, grammar, vocabulary, culture, settings"""
+
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from core.database import SessionLocal
+from features.user.models import User
+from features.grammar.models import Chapter, Exercise
+
+router = APIRouter()
+
+
+@router.get("/welcome", response_class=HTMLResponse)
+async def welcome():
+    return """
+    <html>
+    <head>
+        <title>Welcome</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+        <style>
+            body { margin: 0; height: 100vh; overflow: hidden; opacity: 0; transition: opacity 1s ease; }
+            body.loaded { opacity: 1; }
+            .bg-image {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: url('/textures/welcomepage.png') no-repeat center center;
+                background-size: cover;
+                z-index: -1;
+                transform: scale(1);
+                transition: transform 3s ease;
+            }
+            .bg-image.zoom { transform: scale(1.08); }
+            .welcome-title {
+                color: #E56AB3;
+                font-family: 'Playfair Display', serif;
+                font-size: 120px;
+                text-align: center;
+                margin-top: 20vh;
+                letter-spacing: 2px;
+                font-weight: 700;
+                transition: transform 1s cubic-bezier(0.68,-0.55,0.27,1.55);
+            }
+            .slide-up { transform: translateY(-120vh); }
+            .selection-table {
+                display: flex;
+                width: 100vw;
+                height: 100vh;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                position: absolute;
+                top: 0; left: 0;
+                z-index: 10;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 1s ease;
+                overflow: hidden;
+            }
+            .selection-table.visible {
+                opacity: 1;
+                pointer-events: all;
+            }
+            .selection-bg {
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: url('/textures/tablepage.png') no-repeat center center;
+                background-size: cover;
+                z-index: -1;
+                transform: scale(1.15);
+                transition: transform 3s ease;
+            }
+            .selection-bg.zoom-in { transform: scale(1); }
+            .selection-title {
+                font-family: 'Playfair Display', serif;
+                font-size: 48px;
+                color: #FCBCD7;
+                margin-bottom: 16px;
+                margin-top: 40px;
+            }
+            .selection-desc {
+                font-family: 'Playfair Display', serif;
+                font-size: 20px;
+                color: #FCBCD7;
+                margin-bottom: 32px;
+            }
+            .select-table {
+                display: flex;
+                gap: 40px;
+                justify-content: center;
+            }
+            .select-item {
+                background: transparent;
+                border-radius: 18px;
+                box-shadow: none;
+                padding: 40px 60px;
+                font-size: 32px;
+                color: #FCBCD7;
+                font-family: 'Playfair Display', serif;
+                cursor: pointer;
+                transition: box-shadow 0.3s ease, transform 0.4s ease, opacity 0.5s ease;
+                border: none;
+            }
+            .select-item:hover {
+                box-shadow: 0 0 25px 10px rgba(191, 80, 130, 0.5);
+                transform: scale(1.06);
+            }
+
+            .selection-table.slide-away .selection-title,
+            .selection-table.slide-away .selection-desc,
+            .selection-table.slide-away .course-link {
+                opacity: 0;
+                transform: translateY(-40px);
+                transition: opacity 0.4s ease, transform 0.5s ease;
+            }
+            .selection-table.slide-away .select-item {
+                opacity: 0;
+                transform: translateY(60px) scale(0.9);
+            }
+            .selection-table.slide-away .select-item:nth-child(1) { transition-delay: 0s; }
+            .selection-table.slide-away .select-item:nth-child(2) { transition-delay: 0.08s; }
+            .selection-table.slide-away .select-item:nth-child(3) { transition-delay: 0.16s; }
+
+            .page-slide {
+                position: fixed;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(180deg, #1a0a12 0%, #0a0a0a 100%);
+                z-index: 200;
+                transition: top 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+            }
+            .page-slide.active {
+                top: 0;
+            }
+            .page-slide-label {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-family: 'Playfair Display', serif;
+                font-size: 52px;
+                color: #FCBCD7;
+                opacity: 0;
+                transition: opacity 0.5s ease 0.5s;
+                letter-spacing: 4px;
+            }
+            .page-slide.active .page-slide-label {
+                opacity: 1;
+            }
+            .course-link {
+                font-family: 'Playfair Display', serif;
+                font-size: 16px;
+                color: #FCBCD7;
+                margin-top: 40px;
+                text-decoration: none;
+                cursor: pointer;
+                transition: color 0.3s ease;
+            }
+            .course-link:hover {
+                color: #fde0ed;
+            }
+
+            .black-overlay {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: #000;
+                z-index: 100;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 1.2s ease;
+            }
+            .black-overlay.active {
+                opacity: 1;
+                pointer-events: all;
+            }
+
+            .course-menu {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: url('/textures/templepick.png') no-repeat center center;
+                background-size: cover;
+                z-index: 99;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.8s ease 0.3s;
+            }
+            .course-menu.visible {
+                opacity: 1;
+                pointer-events: all;
+            }
+
+            .ribbon-container {
+                display: flex;
+                flex-direction: column;
+                gap: 40px;
+                align-items: flex-end;
+                margin-right: 0;
+            }
+
+            .ribbon-item {
+                position: relative;
+                width: 588px;
+                height: 140px;
+                cursor: pointer;
+                transform: translateX(100%);
+                transition: transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            }
+            .ribbon-item.slide-in {
+                transform: translateX(30px);
+            }
+            .ribbon-item:hover {
+                transform: translateX(10px) !important;
+            }
+
+            .ribbon-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                object-position: right;
+            }
+
+            .ribbon-text {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-family: 'Playfair Display', serif;
+                font-size: 30px;
+                color: #12060e;
+                text-shadow: none;
+                letter-spacing: 3px;
+                pointer-events: none;
+                white-space: nowrap;
+            }
+
+            .ribbon-item:nth-child(1) { transition-delay: 0.3s; }
+            .ribbon-item:nth-child(2) { transition-delay: 0.5s; }
+            .ribbon-item:nth-child(3) { transition-delay: 0.7s; }
+            .ribbon-item:nth-child(4) { transition-delay: 0.9s; }
+
+            .ribbon-container.fade-out .ribbon-item {
+                opacity: 0;
+                transform: translateX(100%) !important;
+                transition: opacity 0.6s ease, transform 0.8s ease;
+            }
+            .ribbon-container.fade-out .ribbon-item:nth-child(1) { transition-delay: 0s; }
+            .ribbon-container.fade-out .ribbon-item:nth-child(2) { transition-delay: 0.1s; }
+            .ribbon-container.fade-out .ribbon-item:nth-child(3) { transition-delay: 0.2s; }
+            .ribbon-container.fade-out .ribbon-item:nth-child(4) { transition-delay: 0.3s; }
+
+            .fox-video-overlay {
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                z-index: 101;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 1s ease;
+            }
+            .fox-video-overlay.visible {
+                opacity: 1;
+                pointer-events: all;
+            }
+            .fox-video-overlay video {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="bg-image" id="bgImage"></div>
+        <div id="welcomeTitle" class="welcome-title">Welcome</div>
+
+        <div class="black-overlay" id="blackOverlay"></div>
+
+        <div class="course-menu" id="courseMenu">
+            <div class="ribbon-container" id="ribbonContainer">
+                <div class="ribbon-item" data-href="/course/grammar">
+                    <img src="/textures/ribbon1.png" alt="ribbon">
+                    <div class="ribbon-text">Grammar</div>
+                </div>
+                <div class="ribbon-item" data-href="/course/vocabulary">
+                    <img src="/textures/ribbon2.png" alt="ribbon">
+                    <div class="ribbon-text">Vocabulary</div>
+                </div>
+                <div class="ribbon-item" data-href="/course/culture">
+                    <img src="/textures/ribbon3.png" alt="ribbon">
+                    <div class="ribbon-text">Culture</div>
+                </div>
+                <div class="ribbon-item" data-href="/profile">
+                    <img src="/textures/ribbon4.png" alt="ribbon">
+                    <div class="ribbon-text">Profile</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fox-video-overlay" id="foxVideo">
+            <video muted preload="auto" id="foxVid">
+                <source src="/textures/fox%20running.mp4" type="video/mp4">
+            </video>
+        </div>
+
+        <script>
+            window.addEventListener('load', () => {
+                document.body.classList.add('loaded');
+                document.getElementById('bgImage').classList.add('zoom');
+
+                const hash = window.location.hash;
+                if (hash === '#selection') {
+                    // instant — already on selection screen
+                    document.getElementById('welcomeTitle').style.display = 'none';
+                    const courseMenu = document.getElementById('courseMenu');
+                    courseMenu.style.transition = 'none';
+                    courseMenu.classList.add('visible');
+                    document.querySelectorAll('.ribbon-item').forEach(item => {
+                        item.style.transition = 'none';
+                        item.classList.add('slide-in');
+                    });
+                    setTimeout(() => {
+                        courseMenu.style.transition = '';
+                        document.querySelectorAll('.ribbon-item').forEach(i => i.style.transition = '');
+                    }, 50);
+                } else {
+                    // normal flow: Welcome title → course menu
+                    setTimeout(() => {
+                        document.getElementById('welcomeTitle').classList.add('slide-up');
+                        setTimeout(() => {
+                            window.history.replaceState(null, null, '#selection');
+                            const courseMenu = document.getElementById('courseMenu');
+                            courseMenu.classList.add('visible');
+                            setTimeout(() => {
+                                document.querySelectorAll('.ribbon-item').forEach(item => {
+                                    item.classList.add('slide-in');
+                                });
+                            }, 300);
+                        }, 700);
+                    }, 2000);
+                }
+            });
+
+            document.querySelectorAll('.ribbon-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetUrl = this.getAttribute('data-href');
+                    const ribbonContainer = document.getElementById('ribbonContainer');
+                    const foxOverlay = document.getElementById('foxVideo');
+                    const foxVid = document.getElementById('foxVid');
+                    const overlay = document.getElementById('blackOverlay');
+                    ribbonContainer.classList.add('fade-out');
+                    setTimeout(() => {
+                        foxVid.currentTime = 0;
+                        foxVid.play();
+                        foxOverlay.classList.add('visible');
+                    }, 800);
+                    foxVid.addEventListener('ended', function() {
+                        overlay.style.zIndex = '102';
+                        overlay.classList.add('active');
+                        setTimeout(() => { window.location.href = targetUrl; }, 1300);
+                    });
+                });
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+
+# ─────────────────────────────────────────────────────────
+#  GRAMMAR API ENDPOINTS
+# ─────────────────────────────────────────────────────────
+
+@router.get("/api/grammar/user-status")
+async def grammar_user_status(request: Request):
+    """Return the current user's status_chapter and status_exercise."""
+    email = request.cookies.get("user_email")
+    if not email:
+        return JSONResponse({"status_chapter": 1, "status_exercise": 1})
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return JSONResponse({"status_chapter": 1, "status_exercise": 1})
+        return JSONResponse({
+            "status_chapter":  user.status_chapter  or 1,
+            "status_exercise": user.status_exercise or 1,
+        })
+    finally:
+        db.close()
+
+
+@router.get("/api/grammar/chapter/{chapter_id}")
+async def grammar_chapter(chapter_id: int):
+    """Return chapter info + its exercises."""
+    db = SessionLocal()
+    try:
+        chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+        if not chapter:
+            raise HTTPException(status_code=404, detail="Chapter not found")
+        exercises = (
+            db.query(Exercise)
+            .filter(Exercise.chapter_id == chapter_id)
+            .order_by(Exercise.order_index)
+            .all()
+        )
+        return JSONResponse({
+            "chapter": {
+                "id":          chapter.id,
+                "title":       chapter.title,
+                "description": chapter.description or "",
+                "level":       chapter.level or "N5",
+            },
+            "exercises": [
+                {
+                    "id":          e.id,
+                    "title":       e.title,
+                    "description": e.description or "",
+                    "order_index": e.order_index,
+                }
+                for e in exercises
+            ],
+        })
+    finally:
+        db.close()
+
+
+@router.get("/api/grammar/exercise/{exercise_id}")
+async def grammar_exercise_chapter(exercise_id: int):
+    """Return the chapter_id for a given exercise (used client-side after hold)."""
+    db = SessionLocal()
+    try:
+        ex = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+        if not ex:
+            raise HTTPException(status_code=404, detail="Exercise not found")
+        return JSONResponse({"chapter_id": ex.chapter_id, "exercise_id": ex.id})
+    finally:
+        db.close()
+
+
+@router.get("/api/grammar/exercises")
+async def grammar_all_exercises():
+    """Return all grammar exercises ordered by chapter order_index then exercise order_index."""
+    db = SessionLocal()
+    try:
+        exercises = (
+            db.query(Exercise, Chapter)
+            .join(Chapter, Exercise.chapter_id == Chapter.id)
+            .filter(Chapter.category == "grammar")
+            .order_by(Chapter.order_index, Exercise.order_index)
+            .all()
+        )
+        return JSONResponse([
+            {
+                "id":          ex.id,
+                "chapter_id":  ex.chapter_id,
+                "title":       ex.title,
+                "description": ex.description or "",
+                "level":       ch.level or "N5",
+                "order_index": ex.order_index,
+            }
+            for ex, ch in exercises
+        ])
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────────────────
+#  GRAMMAR PAGE
+# ─────────────────────────────────────────────────────────
+
+@router.get("/course/grammar", response_class=HTMLResponse)
+async def course_grammar():
+    return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Grammar — Tenjin-Ya</title>
+        <meta name="description" content="Japanese grammar level progression — explore chapters and exercises.">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            /* ── Reset ── */
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                height: 100vh;
+                overflow: hidden;
+                background: #0d0608;
+                color: #FCBCD7;
+                opacity: 0;
+                transition: opacity 0.9s ease;
+                user-select: none;
+            }
+            body.loaded { opacity: 1; }
+
+            /* ── Background ── */
+            .bg-layer {
+                position: fixed; inset: 0;
+                background: url('/textures/tablepage.png') no-repeat center center / cover;
+                opacity: 0.18; z-index: 0; pointer-events: none;
+            }
+            .vignette {
+                position: fixed; inset: 0;
+                background: radial-gradient(ellipse at center, transparent 30%, #0d0608 90%);
+                z-index: 1; pointer-events: none;
+            }
+
+            /* ── Split layout ── */
+            .layout {
+                position: relative; z-index: 2;
+                display: flex; width: 100vw; height: 100vh;
+            }
+
+            /* ═══════════════════════════════════════════
+               LEFT PANEL — 33%  — Info panel
+            ═══════════════════════════════════════════ */
+            .panel-left {
+                width: 33.333%; height: 100%; flex-shrink: 0;
+                display: flex; flex-direction: column;
+                padding: 48px 32px 48px 36px;
+                border-right: 1px solid rgba(252,188,215,0.06);
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* decorative top fade */
+            .panel-left::before {
+                content: ''; position: absolute;
+                top: 0; left: 0; right: 0; height: 120px;
+                background: linear-gradient(to bottom, rgba(13,6,8,0.8), transparent);
+                pointer-events: none; z-index: 1;
+            }
+
+            .left-inner {
+                display: flex; flex-direction: column; height: 100%;
+                opacity: 0;
+                transform: translateY(12px);
+                transition: opacity 0.45s ease, transform 0.45s ease;
+            }
+            .left-inner.visible {
+                opacity: 1; transform: none;
+            }
+
+            .info-eyebrow {
+                font-family: 'Inter', sans-serif;
+                font-size: 10px; font-weight: 500;
+                letter-spacing: 3px; text-transform: uppercase;
+                color: #E56AB3; margin-bottom: 12px;
+            }
+            .info-title {
+                font-family: 'Playfair Display', serif;
+                font-size: 28px; font-weight: 700;
+                color: #FCBCD7; line-height: 1.25;
+                margin-bottom: 14px;
+            }
+            .info-desc {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.58); line-height: 1.7;
+                margin-bottom: 28px;
+            }
+
+            .exercises-label {
+                font-family: 'Inter', sans-serif;
+                font-size: 10px; font-weight: 500;
+                letter-spacing: 2.5px; text-transform: uppercase;
+                color: rgba(252,188,215,0.35); margin-bottom: 12px;
+            }
+            .exercises-list {
+                list-style: none;
+                display: flex; flex-direction: column; gap: 8px;
+                overflow-y: auto; flex: 1;
+                padding-right: 4px;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(229,106,179,0.25) transparent;
+            }
+            .exercises-list::-webkit-scrollbar { width: 3px; }
+            .exercises-list::-webkit-scrollbar-thumb { background: rgba(229,106,179,0.25); border-radius: 2px; }
+
+            .ex-item {
+                display: flex; align-items: flex-start; gap: 12px;
+                padding: 10px 14px;
+                border-radius: 10px;
+                background: rgba(252,188,215,0.04);
+                border: 1px solid rgba(252,188,215,0.07);
+                transition: background 0.2s ease, border-color 0.2s ease;
+                cursor: pointer;
+            }
+            .ex-item:hover {
+                background: rgba(252,188,215,0.09);
+                border-color: rgba(252,188,215,0.18);
+            }
+            .ex-item.current {
+                background: rgba(229,106,179,0.12);
+                border-color: rgba(229,106,179,0.35);
+            }
+            .ex-num {
+                font-family: 'Playfair Display', serif;
+                font-size: 14px; font-weight: 700;
+                color: #E56AB3; flex-shrink: 0;
+                min-width: 22px;
+            }
+            .ex-text { display: flex; flex-direction: column; gap: 2px; }
+            .ex-title {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 500;
+                color: #FCBCD7;
+            }
+            .ex-desc {
+                font-family: 'Inter', sans-serif;
+                font-size: 11px; font-weight: 300;
+                color: rgba(252,188,215,0.45); line-height: 1.5;
+            }
+
+            /* empty state */
+            .left-empty {
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                height: 100%; gap: 14px; opacity: 0.35;
+                text-align: center;
+            }
+            .left-empty-icon { font-size: 36px; }
+            .left-empty-text {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.6); line-height: 1.6;
+            }
+
+            /* ═══════════════════════════════════════════
+               RIGHT PANEL — 66%  — Axis + nodes
+            ═══════════════════════════════════════════ */
+            .panel-right {
+                width: 66.666%; height: 100%; flex-shrink: 0;
+                position: relative; display: flex;
+                align-items: center; overflow: hidden;
+            }
+
+            /* ── Header ── */
+            .page-header {
+                position: absolute; top: 36px; left: 32px; z-index: 10;
+                opacity: 0; transform: translateY(10px);
+                transition: opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s;
+            }
+            body.loaded .page-header { opacity: 1; transform: none; }
+            .page-header h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: 42px; font-weight: 700;
+                color: #FCBCD7; letter-spacing: 2px; line-height: 1;
+            }
+            .page-header .subtitle {
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.5);
+                margin-top: 6px; letter-spacing: 3px; text-transform: uppercase;
+            }
+
+            /* ── Back button ── */
+            .back-btn {
+                position: absolute; top: 32px; right: 36px; z-index: 50;
+                width: 44px; height: 44px; border-radius: 50%;
+                background: rgba(252,188,215,0.06);
+                border: 1px solid rgba(252,188,215,0.15);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.3s ease;
+                opacity: 0; transform: translateY(10px);
+                color: #FCBCD7; text-decoration: none;
+            }
+            body.loaded .back-btn { opacity: 1; transform: none; transition: opacity 0.7s ease 0.25s, transform 0.7s ease 0.25s, all 0.3s; }
+            .back-btn svg { width: 24px; height: 24px; fill: currentColor; }
+            .back-btn:hover {
+                background: rgba(252,188,215,0.12);
+                border-color: rgba(252,188,215,0.35);
+                transform: scale(1.08) !important;
+                box-shadow: 0 0 16px rgba(191,80,130,0.3);
+            }
+
+            /* ── Axis ── */
+            .axis-track {
+                position: absolute; top: 50%; left: 0; width: 100%;
+                height: 0; pointer-events: none; z-index: 3;
+            }
+            .axis-line {
+                position: absolute; top: 0; left: 0; width: 100%; height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(252,188,215,0.06) 5%,
+                    rgba(252,188,215,0.28) 25%,
+                    rgba(252,188,215,0.28) 75%,
+                    rgba(252,188,215,0.06) 95%,
+                    transparent 100%
+                );
+                transform: translateY(-50%);
+            }
+
+            /* ── Nodes belt ── */
+            .nodes-belt {
+                position: absolute; top: 50%; left: 0;
+                display: flex; align-items: center; flex-wrap: nowrap;
+                cursor: grab; will-change: transform; z-index: 4;
+            }
+            .nodes-belt.dragging { cursor: grabbing; }
+
+            /* ── Node wrapper ── */
+            .node-wrapper {
+                flex-shrink: 0;
+                display: flex; flex-direction: column; align-items: center;
+                width: 110px; position: relative;
+            }
+
+            /* ── Circle node ── */
+            .node {
+                position: relative;
+                width: 58px; height: 58px; border-radius: 50%;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(252,188,215,0.14), rgba(191,80,130,0.06));
+                border: 1.5px solid rgba(252,188,215,0.20);
+                cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                transition:
+                    transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                    border-color 0.2s ease,
+                    box-shadow 0.2s ease,
+                    background 0.2s ease;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .node:hover:not(.holding) {
+                transform: scale(1.10);
+                border-color: rgba(252,188,215,0.46);
+                box-shadow: 0 0 18px rgba(252,188,215,0.14);
+            }
+            /* active = current progress node */
+            .node.active {
+                width: 76px; height: 76px;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(252,188,215,0.28), rgba(191,80,130,0.18));
+                border: 2px solid rgba(252,188,215,0.70);
+                box-shadow:
+                    0 0 24px rgba(252,188,215,0.24),
+                    0 0 60px rgba(191,80,130,0.14),
+                    inset 0 0 12px rgba(252,188,215,0.06);
+            }
+            .node.active:hover:not(.holding) { transform: scale(1.08); }
+            /* previewed = held/highlighted by user */
+            .node.previewed {
+                transform: scale(1.16) !important;
+                border-color: rgba(229,106,179,0.85) !important;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(229,106,179,0.28), rgba(191,80,130,0.20)) !important;
+                box-shadow:
+                    0 0 28px rgba(229,106,179,0.36),
+                    0 0 72px rgba(191,80,130,0.22) !important;
+                transition:
+                    transform 0.15s cubic-bezier(0.34,1.56,0.64,1),
+                    border-color 0.15s ease,
+                    box-shadow 0.15s ease,
+                    background 0.15s ease !important;
+            }
+
+            /* ── Node number ── */
+            .node-number {
+                font-family: 'Playfair Display', serif;
+                font-size: 16px; font-weight: 700;
+                color: rgba(252,188,215,0.65);
+                pointer-events: none; line-height: 1;
+                position: relative; z-index: 1;
+            }
+            .node.active .node-number { font-size: 20px; color: #FCBCD7; }
+            .node.previewed .node-number { color: #FCBCD7; }
+
+            /* ── Node label (below) ── */
+            .node-label {
+                margin-top: 10px;
+                font-size: 9px; font-weight: 300;
+                color: rgba(252,188,215,0.30);
+                letter-spacing: 1.5px; text-transform: uppercase;
+                white-space: nowrap; pointer-events: none;
+                transition: color 0.2s;
+            }
+            .node-wrapper.active-node .node-label,
+            .node-wrapper.preview-node .node-label {
+                color: rgba(252,188,215,0.65);
+            }
+
+            /* ── Connector ── */
+            .node-connector {
+                width: 46px; height: 1px;
+                background: rgba(252,188,215,0.09);
+                flex-shrink: 0; align-self: center;
+                pointer-events: none;
+            }
+
+            /* ── Progress bar ── */
+            .progress-bar-wrap {
+                position: absolute; bottom: 38px;
+                left: 32px; right: 36px;
+                display: flex; align-items: center; gap: 14px;
+                z-index: 10;
+                opacity: 0; transform: translateY(10px);
+                transition: opacity 0.7s ease 0.45s, transform 0.7s ease 0.45s;
+            }
+            body.loaded .progress-bar-wrap { opacity: 1; transform: none; }
+            .progress-bar-track {
+                flex: 1; height: 2px;
+                background: rgba(252,188,215,0.07); border-radius: 2px; overflow: hidden;
+            }
+            .progress-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #E56AB3, #FCBCD7);
+                border-radius: 2px; transition: width 0.5s ease;
+            }
+            .progress-label {
+                font-size: 11px; font-weight: 300;
+                color: rgba(252,188,215,0.38);
+                letter-spacing: 1.5px; white-space: nowrap;
+            }
+
+            /* ── Loading spinner (left panel while fetching) ── */
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .spinner {
+                width: 20px; height: 20px;
+                border: 2px solid rgba(252,188,215,0.15);
+                border-top-color: #E56AB3;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="bg-layer" aria-hidden="true"></div>
+        <div class="vignette" aria-hidden="true"></div>
+
+        <div class="layout">
+
+            <!-- ═══════════════════════════════════════
+                 LEFT PANEL — 33%  — Info
+            ═══════════════════════════════════════ -->
+            <aside class="panel-left" id="panelLeft">
+                <!-- populated by JS -->
+                <div class="left-empty" id="leftEmpty">
+                    <div class="left-empty-icon">☁️</div>
+                    <div class="left-empty-text">Hold a level node<br>to preview its content</div>
+                </div>
+                <div class="left-inner" id="leftInner" style="display:none">
+                    <div class="info-eyebrow" id="infoEyebrow">Chapter</div>
+                    <div class="info-title"  id="infoTitle"></div>
+                    <div class="info-desc"   id="infoDesc"></div>
+                    <div class="exercises-label">Exercises</div>
+                    <ul class="exercises-list" id="exercisesList"></ul>
+                </div>
+            </aside>
+
+            <!-- ═══════════════════════════════════════
+                 RIGHT PANEL — 66%  — Axis
+            ═══════════════════════════════════════ -->
+            <main class="panel-right" id="panelRight">
+
+                <div class="page-header">
+                    <h1>Grammar</h1>
+                    <p class="subtitle">Level progression</p>
+                </div>
+
+                <a class="back-btn" href="/welcome#selection" title="Back to Menu"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
+
+                <div class="axis-track" id="axisTrack" aria-hidden="true">
+                    <div class="axis-line"></div>
+                </div>
+
+                <div class="nodes-belt" id="nodesBelt"
+                     role="list" aria-label="Grammar exercises"></div>
+
+                <div class="progress-bar-wrap">
+                    <span class="progress-label" id="progressLabel">—</span>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+                    </div>
+                    <span class="progress-label" id="levelLabel">N5</span>
+                </div>
+
+            </main>
+        </div>
+
+        <script>
+        (function () {
+            'use strict';
+
+            /* ═══════════════════════════════════════════════════════
+               CONSTANTS
+            ═══════════════════════════════════════════════════════ */
+            const NODE_WRAP_W  = 110;  // .node-wrapper width  (px, matches CSS)
+            const CONNECTOR_W  = 46;   // .node-connector width (px, matches CSS)
+
+            /* ═══════════════════════════════════════════════════════
+               STATE
+            ═══════════════════════════════════════════════════════ */
+            let EXERCISES      = [];   // loaded from /api/grammar/exercises
+            let CURRENT_EX_ID  = 1;   // user's current exercise id
+            let CURRENT_CH_ID  = 1;   // user's current chapter id
+
+            // belt / drag
+            let beltX       = 0;
+            let isDragging  = false;
+            let dragStartX  = 0;
+            let dragStartBX = 0;
+            let lastPtrX    = 0;
+            let lastPtrT    = 0;
+            let velocity    = 0;
+            let momentumRAF = null;
+
+            // hold / interaction
+            let pointerDownTime = 0;
+            let previewedNodeEl = null;   // currently .previewed node
+
+            // left panel cache  { chapterId → {chapter, exercises} }
+            const panelCache = {};
+
+            /* ═══════════════════════════════════════════════════════
+               DOM REFS
+            ═══════════════════════════════════════════════════════ */
+            const belt        = document.getElementById('nodesBelt');
+            const rightPanel  = document.getElementById('panelRight');
+            const leftEmpty   = document.getElementById('leftEmpty');
+            const leftInner   = document.getElementById('leftInner');
+            const infoEyebrow = document.getElementById('infoEyebrow');
+            const infoTitle   = document.getElementById('infoTitle');
+            const infoDesc    = document.getElementById('infoDesc');
+            const exList      = document.getElementById('exercisesList');
+            const progFill    = document.getElementById('progressFill');
+            const progLabel   = document.getElementById('progressLabel');
+            const levelLabel  = document.getElementById('levelLabel');
+
+            /* ═══════════════════════════════════════════════════════
+               BELT HELPERS
+            ═══════════════════════════════════════════════════════ */
+            function copyWidth() {
+                return EXERCISES.length * (NODE_WRAP_W + CONNECTOR_W);
+            }
+
+            function setBeltX(x, smooth) {
+                beltX = x;
+                belt.style.transition = smooth
+                    ? 'transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)'
+                    : 'none';
+                belt.style.transform = `translateX(${x}px) translateY(-50%)`;
+            }
+
+            function cyclicCorrect() {
+                const cw = copyWidth();
+                if (beltX > 0)          setBeltX(beltX - cw,  false);
+                else if (beltX < -(cw * 2)) setBeltX(beltX + cw, false);
+            }
+
+            function startGlide() {
+                cancelAnimationFrame(momentumRAF);
+                function step() {
+                    velocity *= 0.91;
+                    if (Math.abs(velocity) < 0.35) { cyclicCorrect(); return; }
+                    setBeltX(beltX + velocity, false);
+                    cyclicCorrect();
+                    momentumRAF = requestAnimationFrame(step);
+                }
+                momentumRAF = requestAnimationFrame(step);
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               SCROLL TO ACTIVE NODE
+            ═══════════════════════════════════════════════════════ */
+            function scrollToActive() {
+                const centreX = rightPanel.offsetWidth / 2;
+                const wrappers = belt.querySelectorAll('.node-wrapper');
+                let target = null; let count = 0;
+                for (const w of wrappers) {
+                    if (parseInt(w.dataset.id) === CURRENT_EX_ID) {
+                        count++;
+                        if (count === 2) { target = w; break; } // middle copy
+                    }
+                }
+                if (!target) target = belt.querySelector('.active-node') || belt.querySelector('.node-wrapper');
+                if (!target) return;
+
+                const pRect = rightPanel.getBoundingClientRect();
+                const wRect = target.getBoundingClientRect();
+                const wCentre = wRect.left - pRect.left + wRect.width / 2;
+                setBeltX(beltX + (centreX - wCentre), false);
+                cyclicCorrect();
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               LEFT PANEL RENDERING
+            ═══════════════════════════════════════════════════════ */
+            async function showPanel(chapterId, currentExId) {
+                // Show spinner while loading
+                if (!panelCache[chapterId]) {
+                    leftEmpty.style.display = 'none';
+                    leftInner.style.display = 'none';
+                    leftInner.innerHTML = '<div class="spinner" style="margin-top:40px"></div>';
+                    leftInner.style.display = 'flex';
+                    leftInner.style.justifyContent = 'center';
+
+                    try {
+                        const res = await fetch(`/api/grammar/chapter/${chapterId}`);
+                        if (!res.ok) throw new Error('not found');
+                        panelCache[chapterId] = await res.json();
+                    } catch {
+                        leftInner.innerHTML = '<div class="left-empty-text" style="opacity:.5;margin-top:40px">Could not load chapter info</div>';
+                        return;
+                    }
+                }
+
+                const data = panelCache[chapterId];
+                const ch   = data.chapter;
+                const exs  = data.exercises;
+
+                // Rebuild inner HTML properly
+                leftInner.innerHTML = '';
+                leftInner.style.display = 'flex';
+                leftInner.style.justifyContent = '';
+
+                // eyebrow
+                const eyebrow = document.createElement('div');
+                eyebrow.className = 'info-eyebrow';
+                eyebrow.textContent = ch.level ? `Chapter · ${ch.level}` : 'Chapter';
+                leftInner.appendChild(eyebrow);
+
+                // title
+                const title = document.createElement('div');
+                title.className = 'info-title';
+                title.textContent = ch.title;
+                leftInner.appendChild(title);
+
+                // description
+                if (ch.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'info-desc';
+                    desc.textContent = ch.description;
+                    leftInner.appendChild(desc);
+                }
+
+                // exercises label
+                const exLabel = document.createElement('div');
+                exLabel.className = 'exercises-label';
+                exLabel.textContent = `Exercises · ${exs.length}`;
+                leftInner.appendChild(exLabel);
+
+                // exercises list
+                if (exs.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'left-empty-text';
+                    empty.style.opacity = '0.45';
+                    empty.style.marginTop = '12px';
+                    empty.textContent = 'No exercises yet for this chapter.';
+                    leftInner.appendChild(empty);
+                } else {
+                    const ul = document.createElement('ul');
+                    ul.className = 'exercises-list';
+                    exs.forEach((ex, idx) => {
+                        const li = document.createElement('li');
+                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '');
+                        li.setAttribute('role', 'button');
+                        li.setAttribute('tabindex', '0');
+                        li.innerHTML = `
+                            <span class="ex-num">${idx + 1}</span>
+                            <span class="ex-text">
+                                <span class="ex-title">${ex.title}</span>
+                                ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
+                            </span>`;
+                        li.addEventListener('click', () => {
+                            window.location.href = `/course/grammar/exercise/${ex.id}`;
+                        });
+                        li.addEventListener('keydown', e => {
+                            if (e.key === 'Enter' || e.key === ' ')
+                                window.location.href = `/course/grammar/exercise/${ex.id}`;
+                        });
+                        ul.appendChild(li);
+                    });
+                    leftInner.appendChild(ul);
+                }
+
+                leftEmpty.style.display = 'none';
+
+                // fade in
+                leftInner.style.opacity = '0';
+                leftInner.style.transform = 'translateY(10px)';
+                requestAnimationFrame(() => {
+                    leftInner.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+                    leftInner.style.opacity = '1';
+                    leftInner.style.transform = 'none';
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               BUILD BELT FROM EXERCISES ARRAY
+            ═══════════════════════════════════════════════════════ */
+            function buildBelt() {
+                belt.innerHTML = '';
+                const repeated = [...EXERCISES, ...EXERCISES, ...EXERCISES];
+                repeated.forEach((ex, i) => {
+                    const N = EXERCISES.length;
+                    const inMiddle = i >= N && i < N * 2;
+                    const isActive = ex.id === CURRENT_EX_ID && inMiddle;
+
+                    if (i > 0) {
+                        const conn = document.createElement('div');
+                        conn.className = 'node-connector';
+                        conn.setAttribute('aria-hidden', 'true');
+                        belt.appendChild(conn);
+                    }
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'node-wrapper' + (isActive ? ' active-node' : '');
+                    wrapper.dataset.id        = ex.id;
+                    wrapper.dataset.chapterId = ex.chapter_id;
+                    wrapper.setAttribute('role', 'listitem');
+
+                    const node = document.createElement('div');
+                    node.className = 'node' + (isActive ? ' active' : '');
+                    if (isActive) node.id = 'active-node';
+                    node.setAttribute('aria-label', `${ex.title} — ${ex.level}`);
+                    node.setAttribute('tabindex', '0');
+                    node.setAttribute('role', 'button');
+
+                    const num = document.createElement('span');
+                    num.className = 'node-number';
+                    num.textContent = i % EXERCISES.length + 1; // 1-based visual number
+                    node.appendChild(num);
+
+                    const label = document.createElement('div');
+                    label.className = 'node-label';
+                    label.setAttribute('aria-hidden', 'true');
+                    label.textContent = ex.title.length > 12
+                        ? ex.title.slice(0, 11) + '…'
+                        : ex.title;
+
+                    wrapper.appendChild(node);
+                    wrapper.appendChild(label);
+
+                    attachNodeEvents(node, ex);
+                    belt.appendChild(wrapper);
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               NODE  EVENTS  (hold = preview panel, click = navigate)
+            ═══════════════════════════════════════════════════════ */
+            function clearPreview() {
+                if (previewedNodeEl) {
+                    previewedNodeEl.classList.remove('previewed');
+                    const pw = previewedNodeEl.closest('.node-wrapper');
+                    if (pw) pw.classList.remove('preview-node');
+                    previewedNodeEl = null;
+                }
+            }
+
+            function setPreview(nodeEl, ex) {
+                clearPreview();
+                previewedNodeEl = nodeEl;
+                nodeEl.classList.add('previewed');
+                const pw = nodeEl.closest('.node-wrapper');
+                if (pw) pw.classList.add('preview-node');
+                // update panel with the chapter this exercise belongs to
+                showPanel(ex.chapter_id, ex.id);
+            }
+
+            function attachNodeEvents(nodeEl, ex) {
+                let localDownTime = 0;
+
+                function onDown(e) {
+                    e.stopPropagation(); // don't start belt-drag from node
+                    localDownTime = performance.now();
+                    pointerDownTime = localDownTime;
+                    // immediately show preview on hold-start
+                    setPreview(nodeEl, ex);
+                }
+
+                function onUp() {
+                    if (isDragging) return; // drag happened — ignore
+                    const elapsed = performance.now() - localDownTime;
+                    if (elapsed < 280) {
+                        // SHORT click → navigate
+                        clearPreview();
+                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                    }
+                    // longer hold → panel already updated, do nothing else
+                }
+
+                function onLeave() {
+                    // Don't clear preview when mouse just leaves the node;
+                    // user might want to read the panel. Panel clears on
+                    // next hold or outside click.
+                }
+
+                nodeEl.addEventListener('mousedown',  onDown);
+                nodeEl.addEventListener('mouseup',    onUp);
+                nodeEl.addEventListener('mouseleave', onLeave);
+
+                nodeEl.addEventListener('touchstart', e => {
+                    e.stopPropagation();
+                    localDownTime = performance.now();
+                    setPreview(nodeEl, ex);
+                }, { passive: true });
+
+                nodeEl.addEventListener('touchend', () => {
+                    if (isDragging) return;
+                    const elapsed = performance.now() - localDownTime;
+                    if (elapsed < 280) {
+                        clearPreview();
+                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                    }
+                });
+
+                nodeEl.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                    }
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               DRAG / SCROLL
+            ═══════════════════════════════════════════════════════ */
+            function setupDrag() {
+                let startBX = 0;
+
+                belt.addEventListener('mousedown', e => {
+                    cancelAnimationFrame(momentumRAF);
+                    isDragging  = false;
+                    dragStartX  = e.clientX;
+                    startBX     = beltX;
+                    lastPtrX    = e.clientX;
+                    lastPtrT    = performance.now();
+                    velocity    = 0;
+                    belt.style.transition = 'none';
+                    belt.classList.add('dragging');
+
+                    function onMove(ev) {
+                        const dx = ev.clientX - dragStartX;
+                        if (!isDragging && Math.abs(dx) > 5) isDragging = true;
+                        if (!isDragging) return;
+                        const now = performance.now();
+                        velocity = (ev.clientX - lastPtrX) / Math.max(now - lastPtrT, 1) * 16;
+                        lastPtrX = ev.clientX; lastPtrT = now;
+                        setBeltX(startBX + dx, false);
+                        cyclicCorrect();
+                    }
+
+                    function onUp() {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                        belt.classList.remove('dragging');
+                        startGlide();
+                        setTimeout(() => { isDragging = false; }, 60);
+                    }
+
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                });
+
+                // Touch
+                let tStartX = 0, tStartBX = 0;
+                belt.addEventListener('touchstart', e => {
+                    cancelAnimationFrame(momentumRAF);
+                    tStartX  = e.touches[0].clientX;
+                    tStartBX = beltX;
+                    lastPtrX = tStartX; lastPtrT = performance.now();
+                    velocity = 0; isDragging = false;
+                    belt.style.transition = 'none';
+                }, { passive: true });
+
+                belt.addEventListener('touchmove', e => {
+                    const dx = e.touches[0].clientX - tStartX;
+                    if (!isDragging && Math.abs(dx) > 5) isDragging = true;
+                    if (!isDragging) return;
+                    const now = performance.now();
+                    velocity = (e.touches[0].clientX - lastPtrX) / Math.max(now - lastPtrT, 1) * 16;
+                    lastPtrX = e.touches[0].clientX; lastPtrT = now;
+                    setBeltX(tStartBX + dx, false);
+                    cyclicCorrect();
+                }, { passive: true });
+
+                belt.addEventListener('touchend', () => {
+                    startGlide();
+                    setTimeout(() => { isDragging = false; }, 60);
+                });
+
+                // Wheel
+                rightPanel.addEventListener('wheel', e => {
+                    e.preventDefault();
+                    cancelAnimationFrame(momentumRAF);
+                    const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                    setBeltX(beltX - delta * 0.9, false);
+                    cyclicCorrect();
+                }, { passive: false });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               PROGRESS BAR
+            ═══════════════════════════════════════════════════════ */
+            function updateProgress() {
+                const total = EXERCISES.length;
+                if (!total) return;
+                const idx = EXERCISES.findIndex(e => e.id === CURRENT_EX_ID);
+                const done = Math.max(0, idx);
+                progFill.style.width  = Math.round((done / total) * 100) + '%';
+                progLabel.textContent = `${done} / ${total}`;
+                const ex = EXERCISES.find(e => e.id === CURRENT_EX_ID);
+                levelLabel.textContent = ex ? ex.level : 'N5';
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               INIT  — fetch exercises + user status, then build UI
+            ═══════════════════════════════════════════════════════ */
+            async function init() {
+                try {
+                    // Fetch in parallel
+                    const [exRes, userRes] = await Promise.all([
+                        fetch('/api/grammar/exercises'),
+                        fetch('/api/grammar/user-status'),
+                    ]);
+
+                    EXERCISES = await exRes.json();
+                    const userStatus = await userRes.json();
+                    CURRENT_EX_ID = userStatus.status_exercise || 1;
+                    CURRENT_CH_ID = userStatus.status_chapter  || 1;
+
+                    // Fallback: if no DB exercises yet, use a placeholder list
+                    if (!EXERCISES || EXERCISES.length === 0) {
+                        EXERCISES = [
+                            {id:1,chapter_id:1,title:'は & が',level:'N5',description:'Topic vs. subject markers.'},
+                            {id:2,chapter_id:1,title:'です/ます',level:'N5',description:'Polite verb endings.'},
+                            {id:3,chapter_id:1,title:'に & で',level:'N5',description:'Location and direction particles.'},
+                            {id:4,chapter_id:1,title:'を particle',level:'N5',description:'Direct object marker.'},
+                            {id:5,chapter_id:2,title:'て-form',level:'N5',description:'Connecting verbs in sequence.'},
+                            {id:6,chapter_id:2,title:'た-form',level:'N5',description:'Past tense.'},
+                            {id:7,chapter_id:2,title:'ない-form',level:'N5',description:'Negative plain form.'},
+                            {id:8,chapter_id:2,title:'Adj い/な',level:'N5',description:'Adjective conjugation.'},
+                            {id:9,chapter_id:3,title:'から & まで',level:'N5',description:'From / until.'},
+                            {id:10,chapter_id:3,title:'も particle',level:'N5',description:'Also / too.'},
+                            {id:11,chapter_id:3,title:'と particle',level:'N4',description:'And / with.'},
+                            {id:12,chapter_id:3,title:'Conditional',level:'N4',description:'If/when forms.'},
+                            {id:13,chapter_id:4,title:'て-いる',level:'N4',description:'Progressive state.'},
+                            {id:14,chapter_id:4,title:'Passive',level:'N4',description:'Actions done to the subject.'},
+                            {id:15,chapter_id:4,title:'Causative',level:'N4',description:'Make or let someone do.'},
+                            {id:16,chapter_id:4,title:'Potential',level:'N4',description:'Ability and possibility.'},
+                            {id:17,chapter_id:5,title:'Volitional',level:'N4',description:"Let's do — よう / ましょう."},
+                            {id:18,chapter_id:5,title:'のに & のが',level:'N4',description:'Nominalising verbs.'},
+                            {id:19,chapter_id:5,title:'ために',level:'N3',description:'Purpose — in order to.'},
+                            {id:20,chapter_id:5,title:'ながら',level:'N3',description:'Simultaneous actions.'},
+                        ];
+                    }
+
+                    buildBelt();
+                    setupDrag();
+                    updateProgress();
+
+                    // Scroll to active then show body
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            scrollToActive();
+                            document.body.classList.add('loaded');
+                            // Load left panel with current chapter
+                            showPanel(CURRENT_CH_ID, CURRENT_EX_ID);
+                        });
+                    });
+
+                } catch (err) {
+                    console.error('Grammar init error:', err);
+                    document.body.classList.add('loaded');
+                }
+            }
+
+            // Clear preview on background click
+            document.addEventListener('mousedown', e => {
+                if (!e.target.closest('.node') && !e.target.closest('.panel-left')) {
+                    clearPreview();
+                }
+            });
+
+            init();
+
+        })();
+        </script>
+    </body>
+    </html>
+    """
+@router.get("/course/vocabulary", response_class=HTMLResponse)
+async def course_vocabulary():
+    return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Vocabulary — Tenjin-Ya</title>
+        <meta name="description" content="Japanese vocabulary level progression — explore chapters and exercises.">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            /* ── Reset ── */
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                height: 100vh;
+                overflow: hidden;
+                background: #0d0608;
+                color: #FCBCD7;
+                opacity: 0;
+                transition: opacity 0.9s ease;
+                user-select: none;
+            }
+            body.loaded { opacity: 1; }
+
+            /* ── Background ── */
+            .bg-layer {
+                position: fixed; inset: 0;
+                background: url('/textures/tablepage.png') no-repeat center center / cover;
+                opacity: 0.18; z-index: 0; pointer-events: none;
+            }
+            .vignette {
+                position: fixed; inset: 0;
+                background: radial-gradient(ellipse at center, transparent 30%, #0d0608 90%);
+                z-index: 1; pointer-events: none;
+            }
+
+            /* ── Split layout ── */
+            .layout {
+                position: relative; z-index: 2;
+                display: flex; width: 100vw; height: 100vh;
+            }
+
+            /* ═══════════════════════════════════════════
+               LEFT PANEL — 33%  — Info panel
+            ═══════════════════════════════════════════ */
+            .panel-left {
+                width: 33.333%; height: 100%; flex-shrink: 0;
+                display: flex; flex-direction: column;
+                padding: 48px 32px 48px 36px;
+                border-right: 1px solid rgba(252,188,215,0.06);
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* decorative top fade */
+            .panel-left::before {
+                content: ''; position: absolute;
+                top: 0; left: 0; right: 0; height: 120px;
+                background: linear-gradient(to bottom, rgba(13,6,8,0.8), transparent);
+                pointer-events: none; z-index: 1;
+            }
+
+            .left-inner {
+                display: flex; flex-direction: column; height: 100%;
+                opacity: 0;
+                transform: translateY(12px);
+                transition: opacity 0.45s ease, transform 0.45s ease;
+            }
+            .left-inner.visible {
+                opacity: 1; transform: none;
+            }
+
+            .info-eyebrow {
+                font-family: 'Inter', sans-serif;
+                font-size: 10px; font-weight: 500;
+                letter-spacing: 3px; text-transform: uppercase;
+                color: #E56AB3; margin-bottom: 12px;
+            }
+            .info-title {
+                font-family: 'Playfair Display', serif;
+                font-size: 28px; font-weight: 700;
+                color: #FCBCD7; line-height: 1.25;
+                margin-bottom: 14px;
+            }
+            .info-desc {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.58); line-height: 1.7;
+                margin-bottom: 28px;
+            }
+
+            .exercises-label {
+                font-family: 'Inter', sans-serif;
+                font-size: 10px; font-weight: 500;
+                letter-spacing: 2.5px; text-transform: uppercase;
+                color: rgba(252,188,215,0.35); margin-bottom: 12px;
+            }
+            .exercises-list {
+                list-style: none;
+                display: flex; flex-direction: column; gap: 8px;
+                overflow-y: auto; flex: 1;
+                padding-right: 4px;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(229,106,179,0.25) transparent;
+            }
+            .exercises-list::-webkit-scrollbar { width: 3px; }
+            .exercises-list::-webkit-scrollbar-thumb { background: rgba(229,106,179,0.25); border-radius: 2px; }
+
+            .ex-item {
+                display: flex; align-items: flex-start; gap: 12px;
+                padding: 10px 14px;
+                border-radius: 10px;
+                background: rgba(252,188,215,0.04);
+                border: 1px solid rgba(252,188,215,0.07);
+                transition: background 0.2s ease, border-color 0.2s ease;
+                cursor: pointer;
+            }
+            .ex-item:hover {
+                background: rgba(252,188,215,0.09);
+                border-color: rgba(252,188,215,0.18);
+            }
+            .ex-item.current {
+                background: rgba(229,106,179,0.12);
+                border-color: rgba(229,106,179,0.35);
+            }
+            .ex-num {
+                font-family: 'Playfair Display', serif;
+                font-size: 14px; font-weight: 700;
+                color: #E56AB3; flex-shrink: 0;
+                min-width: 22px;
+            }
+            .ex-text { display: flex; flex-direction: column; gap: 2px; }
+            .ex-title {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 500;
+                color: #FCBCD7;
+            }
+            .ex-desc {
+                font-family: 'Inter', sans-serif;
+                font-size: 11px; font-weight: 300;
+                color: rgba(252,188,215,0.45); line-height: 1.5;
+            }
+
+            /* empty state */
+            .left-empty {
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                height: 100%; gap: 14px; opacity: 0.35;
+                text-align: center;
+            }
+            .left-empty-icon { font-size: 36px; }
+            .left-empty-text {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.6); line-height: 1.6;
+            }
+
+            /* ═══════════════════════════════════════════
+               RIGHT PANEL — 66%  — Axis + nodes
+            ═══════════════════════════════════════════ */
+            .panel-right {
+                width: 66.666%; height: 100%; flex-shrink: 0;
+                position: relative; display: flex;
+                align-items: center; overflow: hidden;
+            }
+
+            /* ── Header ── */
+            .page-header {
+                position: absolute; top: 36px; left: 32px; z-index: 10;
+                opacity: 0; transform: translateY(10px);
+                transition: opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s;
+            }
+            body.loaded .page-header { opacity: 1; transform: none; }
+            .page-header h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: 42px; font-weight: 700;
+                color: #FCBCD7; letter-spacing: 2px; line-height: 1;
+            }
+            .page-header .subtitle {
+                font-size: 13px; font-weight: 300;
+                color: rgba(252,188,215,0.5);
+                margin-top: 6px; letter-spacing: 3px; text-transform: uppercase;
+            }
+
+            /* ── Back button ── */
+            .back-btn {
+                position: absolute; top: 32px; right: 36px; z-index: 50;
+                width: 44px; height: 44px; border-radius: 50%;
+                background: rgba(252,188,215,0.06);
+                border: 1px solid rgba(252,188,215,0.15);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.3s ease;
+                opacity: 0; transform: translateY(10px);
+                color: #FCBCD7; text-decoration: none;
+            }
+            body.loaded .back-btn { opacity: 1; transform: none; transition: opacity 0.7s ease 0.25s, transform 0.7s ease 0.25s, all 0.3s; }
+            .back-btn svg { width: 24px; height: 24px; fill: currentColor; }
+            .back-btn:hover {
+                background: rgba(252,188,215,0.12);
+                border-color: rgba(252,188,215,0.35);
+                transform: scale(1.08) !important;
+                box-shadow: 0 0 16px rgba(191,80,130,0.3);
+            }
+
+            /* ── Axis ── */
+            .axis-track {
+                position: absolute; top: 50%; left: 0; width: 100%;
+                height: 0; pointer-events: none; z-index: 3;
+            }
+            .axis-line {
+                position: absolute; top: 0; left: 0; width: 100%; height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(252,188,215,0.06) 5%,
+                    rgba(252,188,215,0.28) 25%,
+                    rgba(252,188,215,0.28) 75%,
+                    rgba(252,188,215,0.06) 95%,
+                    transparent 100%
+                );
+                transform: translateY(-50%);
+            }
+
+            /* ── Nodes belt ── */
+            .nodes-belt {
+                position: absolute; top: 50%; left: 0;
+                display: flex; align-items: center; flex-wrap: nowrap;
+                cursor: grab; will-change: transform; z-index: 4;
+            }
+            .nodes-belt.dragging { cursor: grabbing; }
+
+            /* ── Node wrapper ── */
+            .node-wrapper {
+                flex-shrink: 0;
+                display: flex; flex-direction: column; align-items: center;
+                width: 110px; position: relative;
+            }
+
+            /* ── Circle node ── */
+            .node {
+                position: relative;
+                width: 58px; height: 58px; border-radius: 50%;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(252,188,215,0.14), rgba(191,80,130,0.06));
+                border: 1.5px solid rgba(252,188,215,0.20);
+                cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                transition:
+                    transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                    border-color 0.2s ease,
+                    box-shadow 0.2s ease,
+                    background 0.2s ease;
+                -webkit-tap-highlight-color: transparent;
+            }
+            .node:hover:not(.holding) {
+                transform: scale(1.10);
+                border-color: rgba(252,188,215,0.46);
+                box-shadow: 0 0 18px rgba(252,188,215,0.14);
+            }
+            /* active = current progress node */
+            .node.active {
+                width: 76px; height: 76px;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(252,188,215,0.28), rgba(191,80,130,0.18));
+                border: 2px solid rgba(252,188,215,0.70);
+                box-shadow:
+                    0 0 24px rgba(252,188,215,0.24),
+                    0 0 60px rgba(191,80,130,0.14),
+                    inset 0 0 12px rgba(252,188,215,0.06);
+            }
+            .node.active:hover:not(.holding) { transform: scale(1.08); }
+            /* previewed = held/highlighted by user */
+            .node.previewed {
+                transform: scale(1.16) !important;
+                border-color: rgba(229,106,179,0.85) !important;
+                background: radial-gradient(circle at 35% 30%,
+                    rgba(229,106,179,0.28), rgba(191,80,130,0.20)) !important;
+                box-shadow:
+                    0 0 28px rgba(229,106,179,0.36),
+                    0 0 72px rgba(191,80,130,0.22) !important;
+                transition:
+                    transform 0.15s cubic-bezier(0.34,1.56,0.64,1),
+                    border-color 0.15s ease,
+                    box-shadow 0.15s ease,
+                    background 0.15s ease !important;
+            }
+
+            /* ── Node number ── */
+            .node-number {
+                font-family: 'Playfair Display', serif;
+                font-size: 16px; font-weight: 700;
+                color: rgba(252,188,215,0.65);
+                pointer-events: none; line-height: 1;
+                position: relative; z-index: 1;
+            }
+            .node.active .node-number { font-size: 20px; color: #FCBCD7; }
+            .node.previewed .node-number { color: #FCBCD7; }
+
+            /* ── Node label (below) ── */
+            .node-label {
+                margin-top: 10px;
+                font-size: 9px; font-weight: 300;
+                color: rgba(252,188,215,0.30);
+                letter-spacing: 1.5px; text-transform: uppercase;
+                white-space: nowrap; pointer-events: none;
+                transition: color 0.2s;
+            }
+            .node-wrapper.active-node .node-label,
+            .node-wrapper.preview-node .node-label {
+                color: rgba(252,188,215,0.65);
+            }
+
+            /* ── Connector ── */
+            .node-connector {
+                width: 46px; height: 1px;
+                background: rgba(252,188,215,0.09);
+                flex-shrink: 0; align-self: center;
+                pointer-events: none;
+            }
+
+            /* ── Progress bar ── */
+            .progress-bar-wrap {
+                position: absolute; bottom: 38px;
+                left: 32px; right: 36px;
+                display: flex; align-items: center; gap: 14px;
+                z-index: 10;
+                opacity: 0; transform: translateY(10px);
+                transition: opacity 0.7s ease 0.45s, transform 0.7s ease 0.45s;
+            }
+            body.loaded .progress-bar-wrap { opacity: 1; transform: none; }
+            .progress-bar-track {
+                flex: 1; height: 2px;
+                background: rgba(252,188,215,0.07); border-radius: 2px; overflow: hidden;
+            }
+            .progress-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #E56AB3, #FCBCD7);
+                border-radius: 2px; transition: width 0.5s ease;
+            }
+            .progress-label {
+                font-size: 11px; font-weight: 300;
+                color: rgba(252,188,215,0.38);
+                letter-spacing: 1.5px; white-space: nowrap;
+            }
+
+            /* ── Loading spinner (left panel while fetching) ── */
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .spinner {
+                width: 20px; height: 20px;
+                border: 2px solid rgba(252,188,215,0.15);
+                border-top-color: #E56AB3;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin: auto;
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="bg-layer" aria-hidden="true"></div>
+        <div class="vignette" aria-hidden="true"></div>
+
+        <div class="layout">
+
+            <!-- ═══════════════════════════════════════
+                 LEFT PANEL — 33%  — Info
+            ═══════════════════════════════════════ -->
+            <aside class="panel-left" id="panelLeft">
+                <!-- populated by JS -->
+                <div class="left-empty" id="leftEmpty">
+                    <div class="left-empty-icon">☁️</div>
+                    <div class="left-empty-text">Hold a level node<br>to preview its content</div>
+                </div>
+                <div class="left-inner" id="leftInner" style="display:none">
+                    <div class="info-eyebrow" id="infoEyebrow">Chapter</div>
+                    <div class="info-title"  id="infoTitle"></div>
+                    <div class="info-desc"   id="infoDesc"></div>
+                    <div class="exercises-label">Exercises</div>
+                    <ul class="exercises-list" id="exercisesList"></ul>
+                </div>
+            </aside>
+
+            <!-- ═══════════════════════════════════════
+                 RIGHT PANEL — 66%  — Axis
+            ═══════════════════════════════════════ -->
+            <main class="panel-right" id="panelRight">
+
+                <div class="page-header">
+                    <h1>Vocabulary</h1>
+                    <p class="subtitle">Level progression</p>
+                </div>
+
+                <a class="back-btn" href="/welcome#selection" title="Back to Menu"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
+
+                <div class="axis-track" id="axisTrack" aria-hidden="true">
+                    <div class="axis-line"></div>
+                </div>
+
+                <div class="nodes-belt" id="nodesBelt"
+                     role="list" aria-label="Vocabulary exercises"></div>
+
+                <div class="progress-bar-wrap">
+                    <span class="progress-label" id="progressLabel">—</span>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+                    </div>
+                    <span class="progress-label" id="levelLabel">N5</span>
+                </div>
+
+            </main>
+        </div>
+
+        <script>
+        (function () {
+            'use strict';
+
+            /* ═══════════════════════════════════════════════════════
+               CONSTANTS
+            ═══════════════════════════════════════════════════════ */
+            const NODE_WRAP_W  = 110;  // .node-wrapper width  (px, matches CSS)
+            const CONNECTOR_W  = 46;   // .node-connector width (px, matches CSS)
+
+            /* ═══════════════════════════════════════════════════════
+               STATE
+            ═══════════════════════════════════════════════════════ */
+            let EXERCISES      = [];   // loaded from /api/vocabulary/exercises
+            let CURRENT_EX_ID  = 1;   // user's current exercise id
+            let CURRENT_CH_ID  = 1;   // user's current chapter id
+
+            // belt / drag
+            let beltX       = 0;
+            let isDragging  = false;
+            let dragStartX  = 0;
+            let dragStartBX = 0;
+            let lastPtrX    = 0;
+            let lastPtrT    = 0;
+            let velocity    = 0;
+            let momentumRAF = null;
+
+            // hold / interaction
+            let pointerDownTime = 0;
+            let previewedNodeEl = null;   // currently .previewed node
+
+            // left panel cache  { chapterId → {chapter, exercises} }
+            const panelCache = {};
+
+            /* ═══════════════════════════════════════════════════════
+               DOM REFS
+            ═══════════════════════════════════════════════════════ */
+            const belt        = document.getElementById('nodesBelt');
+            const rightPanel  = document.getElementById('panelRight');
+            const leftEmpty   = document.getElementById('leftEmpty');
+            const leftInner   = document.getElementById('leftInner');
+            const infoEyebrow = document.getElementById('infoEyebrow');
+            const infoTitle   = document.getElementById('infoTitle');
+            const infoDesc    = document.getElementById('infoDesc');
+            const exList      = document.getElementById('exercisesList');
+            const progFill    = document.getElementById('progressFill');
+            const progLabel   = document.getElementById('progressLabel');
+            const levelLabel  = document.getElementById('levelLabel');
+
+            /* ═══════════════════════════════════════════════════════
+               BELT HELPERS
+            ═══════════════════════════════════════════════════════ */
+            function copyWidth() {
+                return EXERCISES.length * (NODE_WRAP_W + CONNECTOR_W);
+            }
+
+            function setBeltX(x, smooth) {
+                beltX = x;
+                belt.style.transition = smooth
+                    ? 'transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)'
+                    : 'none';
+                belt.style.transform = `translateX(${x}px) translateY(-50%)`;
+            }
+
+            function cyclicCorrect() {
+                const cw = copyWidth();
+                if (beltX > 0)          setBeltX(beltX - cw,  false);
+                else if (beltX < -(cw * 2)) setBeltX(beltX + cw, false);
+            }
+
+            function startGlide() {
+                cancelAnimationFrame(momentumRAF);
+                function step() {
+                    velocity *= 0.91;
+                    if (Math.abs(velocity) < 0.35) { cyclicCorrect(); return; }
+                    setBeltX(beltX + velocity, false);
+                    cyclicCorrect();
+                    momentumRAF = requestAnimationFrame(step);
+                }
+                momentumRAF = requestAnimationFrame(step);
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               SCROLL TO ACTIVE NODE
+            ═══════════════════════════════════════════════════════ */
+            function scrollToActive() {
+                const centreX = rightPanel.offsetWidth / 2;
+                const wrappers = belt.querySelectorAll('.node-wrapper');
+                let target = null; let count = 0;
+                for (const w of wrappers) {
+                    if (parseInt(w.dataset.id) === CURRENT_EX_ID) {
+                        count++;
+                        if (count === 2) { target = w; break; } // middle copy
+                    }
+                }
+                if (!target) target = belt.querySelector('.active-node') || belt.querySelector('.node-wrapper');
+                if (!target) return;
+
+                const pRect = rightPanel.getBoundingClientRect();
+                const wRect = target.getBoundingClientRect();
+                const wCentre = wRect.left - pRect.left + wRect.width / 2;
+                setBeltX(beltX + (centreX - wCentre), false);
+                cyclicCorrect();
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               LEFT PANEL RENDERING
+            ═══════════════════════════════════════════════════════ */
+            async function showPanel(chapterId, currentExId) {
+                // Show spinner while loading
+                if (!panelCache[chapterId]) {
+                    leftEmpty.style.display = 'none';
+                    leftInner.style.display = 'none';
+                    leftInner.innerHTML = '<div class="spinner" style="margin-top:40px"></div>';
+                    leftInner.style.display = 'flex';
+                    leftInner.style.justifyContent = 'center';
+
+                    try {
+                        const res = await fetch(`/api/vocabulary/chapter/${chapterId}`);
+                        if (!res.ok) throw new Error('not found');
+                        panelCache[chapterId] = await res.json();
+                    } catch {
+                        leftInner.innerHTML = '<div class="left-empty-text" style="opacity:.5;margin-top:40px">Could not load chapter info</div>';
+                        return;
+                    }
+                }
+
+                const data = panelCache[chapterId];
+                const ch   = data.chapter;
+                const exs  = data.exercises;
+
+                // Rebuild inner HTML properly
+                leftInner.innerHTML = '';
+                leftInner.style.display = 'flex';
+                leftInner.style.justifyContent = '';
+
+                // eyebrow
+                const eyebrow = document.createElement('div');
+                eyebrow.className = 'info-eyebrow';
+                eyebrow.textContent = ch.level ? `Chapter · ${ch.level}` : 'Chapter';
+                leftInner.appendChild(eyebrow);
+
+                // title
+                const title = document.createElement('div');
+                title.className = 'info-title';
+                title.textContent = ch.title;
+                leftInner.appendChild(title);
+
+                // description
+                if (ch.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'info-desc';
+                    desc.textContent = ch.description;
+                    leftInner.appendChild(desc);
+                }
+
+                // exercises label
+                const exLabel = document.createElement('div');
+                exLabel.className = 'exercises-label';
+                exLabel.textContent = `Exercises · ${exs.length}`;
+                leftInner.appendChild(exLabel);
+
+                // exercises list
+                if (exs.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'left-empty-text';
+                    empty.style.opacity = '0.45';
+                    empty.style.marginTop = '12px';
+                    empty.textContent = 'No exercises yet for this chapter.';
+                    leftInner.appendChild(empty);
+                } else {
+                    const ul = document.createElement('ul');
+                    ul.className = 'exercises-list';
+                    exs.forEach((ex, idx) => {
+                        const li = document.createElement('li');
+                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '');
+                        li.setAttribute('role', 'button');
+                        li.setAttribute('tabindex', '0');
+                        li.innerHTML = `
+                            <span class="ex-num">${idx + 1}</span>
+                            <span class="ex-text">
+                                <span class="ex-title">${ex.title}</span>
+                                ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
+                            </span>`;
+                        li.addEventListener('click', () => {
+                            window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                        });
+                        li.addEventListener('keydown', e => {
+                            if (e.key === 'Enter' || e.key === ' ')
+                                window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                        });
+                        ul.appendChild(li);
+                    });
+                    leftInner.appendChild(ul);
+                }
+
+                leftEmpty.style.display = 'none';
+
+                // fade in
+                leftInner.style.opacity = '0';
+                leftInner.style.transform = 'translateY(10px)';
+                requestAnimationFrame(() => {
+                    leftInner.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+                    leftInner.style.opacity = '1';
+                    leftInner.style.transform = 'none';
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               BUILD BELT FROM EXERCISES ARRAY
+            ═══════════════════════════════════════════════════════ */
+            function buildBelt() {
+                belt.innerHTML = '';
+                const repeated = [...EXERCISES, ...EXERCISES, ...EXERCISES];
+                repeated.forEach((ex, i) => {
+                    const N = EXERCISES.length;
+                    const inMiddle = i >= N && i < N * 2;
+                    const isActive = ex.id === CURRENT_EX_ID && inMiddle;
+
+                    if (i > 0) {
+                        const conn = document.createElement('div');
+                        conn.className = 'node-connector';
+                        conn.setAttribute('aria-hidden', 'true');
+                        belt.appendChild(conn);
+                    }
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'node-wrapper' + (isActive ? ' active-node' : '');
+                    wrapper.dataset.id        = ex.id;
+                    wrapper.dataset.chapterId = ex.chapter_id;
+                    wrapper.setAttribute('role', 'listitem');
+
+                    const node = document.createElement('div');
+                    node.className = 'node' + (isActive ? ' active' : '');
+                    if (isActive) node.id = 'active-node';
+                    node.setAttribute('aria-label', `${ex.title} — ${ex.level}`);
+                    node.setAttribute('tabindex', '0');
+                    node.setAttribute('role', 'button');
+
+                    const num = document.createElement('span');
+                    num.className = 'node-number';
+                    num.textContent = i % EXERCISES.length + 1; // 1-based visual number
+                    node.appendChild(num);
+
+                    const label = document.createElement('div');
+                    label.className = 'node-label';
+                    label.setAttribute('aria-hidden', 'true');
+                    label.textContent = ex.title.length > 12
+                        ? ex.title.slice(0, 11) + '…'
+                        : ex.title;
+
+                    wrapper.appendChild(node);
+                    wrapper.appendChild(label);
+
+                    attachNodeEvents(node, ex);
+                    belt.appendChild(wrapper);
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               NODE  EVENTS  (hold = preview panel, click = navigate)
+            ═══════════════════════════════════════════════════════ */
+            function clearPreview() {
+                if (previewedNodeEl) {
+                    previewedNodeEl.classList.remove('previewed');
+                    const pw = previewedNodeEl.closest('.node-wrapper');
+                    if (pw) pw.classList.remove('preview-node');
+                    previewedNodeEl = null;
+                }
+            }
+
+            function setPreview(nodeEl, ex) {
+                clearPreview();
+                previewedNodeEl = nodeEl;
+                nodeEl.classList.add('previewed');
+                const pw = nodeEl.closest('.node-wrapper');
+                if (pw) pw.classList.add('preview-node');
+                // update panel with the chapter this exercise belongs to
+                showPanel(ex.chapter_id, ex.id);
+            }
+
+            function attachNodeEvents(nodeEl, ex) {
+                let localDownTime = 0;
+
+                function onDown(e) {
+                    e.stopPropagation(); // don't start belt-drag from node
+                    localDownTime = performance.now();
+                    pointerDownTime = localDownTime;
+                    // immediately show preview on hold-start
+                    setPreview(nodeEl, ex);
+                }
+
+                function onUp() {
+                    if (isDragging) return; // drag happened — ignore
+                    const elapsed = performance.now() - localDownTime;
+                    if (elapsed < 280) {
+                        // SHORT click → navigate
+                        clearPreview();
+                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                    }
+                    // longer hold → panel already updated, do nothing else
+                }
+
+                function onLeave() {
+                    // Don't clear preview when mouse just leaves the node;
+                    // user might want to read the panel. Panel clears on
+                    // next hold or outside click.
+                }
+
+                nodeEl.addEventListener('mousedown',  onDown);
+                nodeEl.addEventListener('mouseup',    onUp);
+                nodeEl.addEventListener('mouseleave', onLeave);
+
+                nodeEl.addEventListener('touchstart', e => {
+                    e.stopPropagation();
+                    localDownTime = performance.now();
+                    setPreview(nodeEl, ex);
+                }, { passive: true });
+
+                nodeEl.addEventListener('touchend', () => {
+                    if (isDragging) return;
+                    const elapsed = performance.now() - localDownTime;
+                    if (elapsed < 280) {
+                        clearPreview();
+                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                    }
+                });
+
+                nodeEl.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                    }
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               DRAG / SCROLL
+            ═══════════════════════════════════════════════════════ */
+            function setupDrag() {
+                let startBX = 0;
+
+                belt.addEventListener('mousedown', e => {
+                    cancelAnimationFrame(momentumRAF);
+                    isDragging  = false;
+                    dragStartX  = e.clientX;
+                    startBX     = beltX;
+                    lastPtrX    = e.clientX;
+                    lastPtrT    = performance.now();
+                    velocity    = 0;
+                    belt.style.transition = 'none';
+                    belt.classList.add('dragging');
+
+                    function onMove(ev) {
+                        const dx = ev.clientX - dragStartX;
+                        if (!isDragging && Math.abs(dx) > 5) isDragging = true;
+                        if (!isDragging) return;
+                        const now = performance.now();
+                        velocity = (ev.clientX - lastPtrX) / Math.max(now - lastPtrT, 1) * 16;
+                        lastPtrX = ev.clientX; lastPtrT = now;
+                        setBeltX(startBX + dx, false);
+                        cyclicCorrect();
+                    }
+
+                    function onUp() {
+                        window.removeEventListener('mousemove', onMove);
+                        window.removeEventListener('mouseup', onUp);
+                        belt.classList.remove('dragging');
+                        startGlide();
+                        setTimeout(() => { isDragging = false; }, 60);
+                    }
+
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                });
+
+                // Touch
+                let tStartX = 0, tStartBX = 0;
+                belt.addEventListener('touchstart', e => {
+                    cancelAnimationFrame(momentumRAF);
+                    tStartX  = e.touches[0].clientX;
+                    tStartBX = beltX;
+                    lastPtrX = tStartX; lastPtrT = performance.now();
+                    velocity = 0; isDragging = false;
+                    belt.style.transition = 'none';
+                }, { passive: true });
+
+                belt.addEventListener('touchmove', e => {
+                    const dx = e.touches[0].clientX - tStartX;
+                    if (!isDragging && Math.abs(dx) > 5) isDragging = true;
+                    if (!isDragging) return;
+                    const now = performance.now();
+                    velocity = (e.touches[0].clientX - lastPtrX) / Math.max(now - lastPtrT, 1) * 16;
+                    lastPtrX = e.touches[0].clientX; lastPtrT = now;
+                    setBeltX(tStartBX + dx, false);
+                    cyclicCorrect();
+                }, { passive: true });
+
+                belt.addEventListener('touchend', () => {
+                    startGlide();
+                    setTimeout(() => { isDragging = false; }, 60);
+                });
+
+                // Wheel
+                rightPanel.addEventListener('wheel', e => {
+                    e.preventDefault();
+                    cancelAnimationFrame(momentumRAF);
+                    const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                    setBeltX(beltX - delta * 0.9, false);
+                    cyclicCorrect();
+                }, { passive: false });
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               PROGRESS BAR
+            ═══════════════════════════════════════════════════════ */
+            function updateProgress() {
+                const total = EXERCISES.length;
+                if (!total) return;
+                const idx = EXERCISES.findIndex(e => e.id === CURRENT_EX_ID);
+                const done = Math.max(0, idx);
+                progFill.style.width  = Math.round((done / total) * 100) + '%';
+                progLabel.textContent = `${done} / ${total}`;
+                const ex = EXERCISES.find(e => e.id === CURRENT_EX_ID);
+                levelLabel.textContent = ex ? ex.level : 'N5';
+            }
+
+            /* ═══════════════════════════════════════════════════════
+               INIT  — fetch exercises + user status, then build UI
+            ═══════════════════════════════════════════════════════ */
+            async function init() {
+                try {
+                    // Fetch in parallel
+                    const [exRes, userRes] = await Promise.all([
+                        fetch('/api/vocabulary/exercises'),
+                        fetch('/api/vocabulary/user-status'),
+                    ]);
+
+                    EXERCISES = await exRes.json();
+                    const userStatus = await userRes.json();
+                    CURRENT_EX_ID = userStatus.status_exercise || 1;
+                    CURRENT_CH_ID = userStatus.status_chapter  || 1;
+
+                    // Fallback: if no DB exercises yet, use a placeholder list
+                    if (!EXERCISES || EXERCISES.length === 0) {
+                        EXERCISES = [
+                            {id:1,chapter_id:1,title:'は & が',level:'N5',description:'Topic vs. subject markers.'},
+                            {id:2,chapter_id:1,title:'です/ます',level:'N5',description:'Polite verb endings.'},
+                            {id:3,chapter_id:1,title:'に & で',level:'N5',description:'Location and direction particles.'},
+                            {id:4,chapter_id:1,title:'を particle',level:'N5',description:'Direct object marker.'},
+                            {id:5,chapter_id:2,title:'て-form',level:'N5',description:'Connecting verbs in sequence.'},
+                            {id:6,chapter_id:2,title:'た-form',level:'N5',description:'Past tense.'},
+                            {id:7,chapter_id:2,title:'ない-form',level:'N5',description:'Negative plain form.'},
+                            {id:8,chapter_id:2,title:'Adj い/な',level:'N5',description:'Adjective conjugation.'},
+                            {id:9,chapter_id:3,title:'から & まで',level:'N5',description:'From / until.'},
+                            {id:10,chapter_id:3,title:'も particle',level:'N5',description:'Also / too.'},
+                            {id:11,chapter_id:3,title:'と particle',level:'N4',description:'And / with.'},
+                            {id:12,chapter_id:3,title:'Conditional',level:'N4',description:'If/when forms.'},
+                            {id:13,chapter_id:4,title:'て-いる',level:'N4',description:'Progressive state.'},
+                            {id:14,chapter_id:4,title:'Passive',level:'N4',description:'Actions done to the subject.'},
+                            {id:15,chapter_id:4,title:'Causative',level:'N4',description:'Make or let someone do.'},
+                            {id:16,chapter_id:4,title:'Potential',level:'N4',description:'Ability and possibility.'},
+                            {id:17,chapter_id:5,title:'Volitional',level:'N4',description:"Let's do — よう / ましょう."},
+                            {id:18,chapter_id:5,title:'のに & のが',level:'N4',description:'Nominalising verbs.'},
+                            {id:19,chapter_id:5,title:'ために',level:'N3',description:'Purpose — in order to.'},
+                            {id:20,chapter_id:5,title:'ながら',level:'N3',description:'Simultaneous actions.'},
+                        ];
+                    }
+
+                    buildBelt();
+                    setupDrag();
+                    updateProgress();
+
+                    // Scroll to active then show body
+                    // Use the chapter_id from the first vocabulary exercise in EXERCISES
+                    // (do NOT use user status_chapter which is a grammar chapter ID)
+                    const initialChapterId = EXERCISES.length > 0 ? EXERCISES[0].chapter_id : null;
+                    const initialExId      = EXERCISES.length > 0 ? EXERCISES[0].id : null;
+
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            scrollToActive();
+                            document.body.classList.add('loaded');
+                            // Load left panel with first vocabulary chapter
+                            if (initialChapterId) showPanel(initialChapterId, initialExId);
+                        });
+                    });
+
+                } catch (err) {
+                    console.error('Vocabulary init error:', err);
+                    document.body.classList.add('loaded');
+                }
+            }
+
+            // Clear preview on background click
+            document.addEventListener('mousedown', e => {
+                if (!e.target.closest('.node') && !e.target.closest('.panel-left')) {
+                    clearPreview();
+                }
+            });
+
+            init();
+
+        })();
+        </script>
+    </body>
+    </html>
+    """
+
+
+@router.get("/course/vocabulary/exercise/{exercise_id}", response_class=HTMLResponse)
+async def vocabulary_exercise_page(exercise_id: int):
+    """Exercise page for vocabulary. The first exercise of the first vocab chapter = writing system picker."""
+    db = SessionLocal()
+    try:
+        ex = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+        # Find the very first exercise of the first vocabulary chapter
+        first_vocab_ch = (
+            db.query(Chapter)
+            .filter(Chapter.category == "vocabulary")
+            .order_by(Chapter.order_index)
+            .first()
+        )
+        first_ex = None
+        if first_vocab_ch:
+            first_ex = (
+                db.query(Exercise)
+                .filter(Exercise.chapter_id == first_vocab_ch.id)
+                .order_by(Exercise.order_index)
+                .first()
+            )
+        is_writing_systems = first_ex and ex and ex.id == first_ex.id
+    finally:
+        db.close()
+
+    if is_writing_systems:
+        return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Writing Systems — Tenjin-Ya</title>
+        <meta name="description" content="Choose a writing system to learn: Hiragana, Katakana, or Kanji.">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                height: 100vh;
+                overflow: hidden;
+                background: #0d0608;
+                color: #FCBCD7;
+                opacity: 0;
+                transition: opacity 0.9s ease;
+                user-select: none;
+            }
+            body.loaded { opacity: 1; }
+
+            /* Background */
+            .bg-img {
+                position: fixed; inset: 0;
+                background: url('/textures/tablepage.png') no-repeat center center / cover;
+                opacity: 0.22; z-index: 0; pointer-events: none;
+            }
+            .vignette {
+                position: fixed; inset: 0;
+                background: radial-gradient(ellipse at center, transparent 20%, #0d0608 88%);
+                z-index: 1; pointer-events: none;
+            }
+
+            /* Back button */
+            .back-btn {
+                position: fixed; top: 32px; left: 36px; z-index: 50;
+                width: 44px; height: 44px; border-radius: 50%;
+                background: rgba(252,188,215,0.06);
+                border: 1px solid rgba(252,188,215,0.15);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.3s ease;
+                color: #FCBCD7; text-decoration: none;
+            }
+            .back-btn svg { width: 24px; height: 24px; fill: currentColor; }
+            .back-btn:hover {
+                background: rgba(252,188,215,0.12);
+                border-color: rgba(252,188,215,0.35);
+                box-shadow: 0 0 16px rgba(191,80,130,0.3);
+                transform: scale(1.08);
+            }
+
+            /* Centre content */
+            .centre {
+                position: relative; z-index: 2;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                height: 100vh;
+                text-align: center;
+                gap: 0;
+            }
+
+            .eyebrow {
+                font-size: 11px; font-weight: 500;
+                letter-spacing: 3px; text-transform: uppercase;
+                color: #E56AB3; margin-bottom: 18px;
+                opacity: 0; transform: translateY(10px);
+                animation: fadeUp 0.6s ease 0.3s forwards;
+            }
+
+            h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(36px, 5vw, 60px);
+                font-weight: 700;
+                color: #FCBCD7;
+                line-height: 1.15;
+                margin-bottom: 14px;
+                opacity: 0; transform: translateY(12px);
+                animation: fadeUp 0.6s ease 0.5s forwards;
+            }
+
+            .subtitle {
+                font-size: 16px; font-weight: 300;
+                color: rgba(252,188,215,0.6);
+                letter-spacing: 0.5px;
+                margin-bottom: 64px;
+                opacity: 0; transform: translateY(12px);
+                animation: fadeUp 0.6s ease 0.65s forwards;
+            }
+
+            /* Cards row */
+            .cards {
+                display: flex; gap: 28px;
+                opacity: 0; transform: translateY(16px);
+                animation: fadeUp 0.6s ease 0.85s forwards;
+            }
+
+            .card {
+                position: relative;
+                width: 180px; height: 220px;
+                border-radius: 20px;
+                background: rgba(252,188,215,0.04);
+                border: 1px solid rgba(252,188,215,0.12);
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                gap: 16px;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background 0.3s ease, border-color 0.3s ease,
+                            box-shadow 0.3s ease, transform 0.3s ease;
+                overflow: hidden;
+            }
+            .card::before {
+                content: '';
+                position: absolute; inset: 0;
+                background: radial-gradient(circle at 50% 50%, rgba(229,106,179,0.12) 0%, transparent 70%);
+                opacity: 0; transition: opacity 0.4s ease;
+            }
+            .card:hover { border-color: rgba(252,188,215,0.35); transform: translateY(-6px); }
+            .card:hover::before { opacity: 1; }
+            .card:hover { box-shadow: 0 12px 40px rgba(191,80,130,0.25); }
+
+            .card-jp {
+                font-family: 'Playfair Display', serif;
+                font-size: 52px;
+                color: #FCBCD7;
+                line-height: 1;
+                transition: transform 0.3s ease;
+            }
+            .card:hover .card-jp { transform: scale(1.1); }
+
+            .card-label {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 500;
+                letter-spacing: 2px; text-transform: uppercase;
+                color: rgba(252,188,215,0.65);
+            }
+
+            @keyframes fadeUp {
+                to { opacity: 1; transform: none; }
+            }
+
+            /* Page transition overlay */
+            .page-fade {
+                position: fixed; inset: 0;
+                background: #0d0608;
+                z-index: 200;
+                opacity: 0; pointer-events: none;
+                transition: opacity 0.6s ease;
+            }
+            .page-fade.active { opacity: 1; pointer-events: all; }
+        </style>
+    </head>
+    <body>
+        <div class="bg-img"></div>
+        <div class="vignette"></div>
+        <div class="page-fade" id="pageFade"></div>
+
+        <!-- Back to Vocabulary -->
+        <a class="back-btn" href="/course/vocabulary" title="Back to Vocabulary">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+
+        <div class="centre">
+            <div class="eyebrow">Vocabulary · Chapter 1 · Exercise 1</div>
+            <h1>What do you want to learn?</h1>
+            <p class="subtitle">Choose a writing system to begin your journey.</p>
+
+            <div class="cards">
+                <a class="card" href="/hiragana-table" id="cardHiragana">
+                    <div class="card-jp">あ</div>
+                    <div class="card-label">Hiragana</div>
+                </a>
+                <a class="card" href="/katakana-table" id="cardKatakana">
+                    <div class="card-jp">ア</div>
+                    <div class="card-label">Katakana</div>
+                </a>
+                <a class="card" href="/kanji-table" id="cardKanji">
+                    <div class="card-jp">字</div>
+                    <div class="card-label">Kanji</div>
+                </a>
+            </div>
+        </div>
+
+        <script>
+            window.addEventListener('load', () => document.body.classList.add('loaded'));
+
+            // Smooth transition out on card click
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    const fade = document.getElementById('pageFade');
+                    fade.classList.add('active');
+                    setTimeout(() => { window.location.href = href; }, 650);
+                });
+            });
+
+            // Smooth transition out on back button
+            document.querySelector('.back-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                const fade = document.getElementById('pageFade');
+                fade.classList.add('active');
+                setTimeout(() => { window.location.href = href; }, 650);
+            });
+        </script>
+    </body>
+    </html>
+    """
+    # Generic placeholder for other exercises
+    return HTMLResponse(f"""
+    <!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><title>Vocabulary Exercise {exercise_id}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>body{{font-family:'Playfair Display',serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#0d0608;color:#FCBCD7;gap:24px;opacity:0;transition:opacity 0.8s ease;}}body.loaded{{opacity:1;}}a{{color:#E56AB3;text-decoration:none;font-size:14px;letter-spacing:1px;}}</style>
+    </head><body>
+    <h1 style="font-size:48px">Exercise {exercise_id}</h1>
+    <p style="font-size:18px;opacity:.6">Vocabulary exercise content coming soon.</p>
+    <a href="/course/vocabulary">← Back to Vocabulary</a>
+    <script>window.addEventListener('load',()=>document.body.classList.add('loaded'));</script>
+    </body></html>
+    """)
+
+
+@router.get("/course/culture", response_class=HTMLResponse)
+async def course_culture():
+    return """
+    <html>
+    <head>
+        <title>Culture</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Playfair Display', serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #111; color: #FCBCD7; opacity: 0; transition: opacity 1s ease; }
+            body.loaded { opacity: 1; }
+            h1 { font-size: 48px; }
+        </style>
+    </head>
+    <body>
+        <h1>Culture</h1>
+        <script>window.addEventListener('load', () => document.body.classList.add('loaded'));</script>
+    </body>
+    </html>
+    """
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page():
+    return """
+    <html>
+    <head>
+        <title>Settings</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Playfair Display', serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: url('/textures/templeprofile.png') no-repeat center center; background-size: cover; color: #FCBCD7; opacity: 0; transition: opacity 1s ease; }
+            body.loaded { opacity: 1; }
+            h1 { font-size: 48px; }
+        </style>
+    </head>
+    <body>
+        <h1>Settings</h1>
+        <script>window.addEventListener('load', () => document.body.classList.add('loaded'));</script>
+    </body>
+    </html>
+    """
+
+
+# ─────────────────────────────────────────────────────────
+#  VOCABULARY API ENDPOINTS
+# ─────────────────────────────────────────────────────────
+
+@router.get("/api/vocabulary/user-status")
+async def vocabulary_user_status(request: Request):
+    return await grammar_user_status(request)
+
+@router.get("/api/vocabulary/chapter/{chapter_id}")
+async def vocabulary_chapter(chapter_id: int):
+    """Return vocabulary chapter info + its exercises (filtered to vocabulary category only)."""
+    db = SessionLocal()
+    try:
+        chapter = (
+            db.query(Chapter)
+            .filter(Chapter.id == chapter_id, Chapter.category == "vocabulary")
+            .first()
+        )
+        if not chapter:
+            raise HTTPException(status_code=404, detail="Vocabulary chapter not found")
+        exercises = (
+            db.query(Exercise)
+            .filter(Exercise.chapter_id == chapter_id)
+            .order_by(Exercise.order_index)
+            .all()
+        )
+        return JSONResponse({
+            "chapter": {
+                "id":          chapter.id,
+                "title":       chapter.title,
+                "description": chapter.description or "",
+                "level":       chapter.level or "N5",
+            },
+            "exercises": [
+                {
+                    "id":          e.id,
+                    "title":       e.title,
+                    "description": e.description or "",
+                    "order_index": e.order_index,
+                }
+                for e in exercises
+            ],
+        })
+    finally:
+        db.close()
+
+@router.get("/api/vocabulary/exercise/{exercise_id}")
+async def vocabulary_exercise_chapter(exercise_id: int):
+    return await grammar_exercise_chapter(exercise_id)
+
+@router.get("/api/vocabulary/exercises")
+async def vocabulary_all_exercises():
+    db = SessionLocal()
+    try:
+        exercises = (
+            db.query(Exercise, Chapter)
+            .join(Chapter, Exercise.chapter_id == Chapter.id)
+            .filter(Chapter.category == "vocabulary")
+            .order_by(Chapter.order_index, Exercise.order_index)
+            .all()
+        )
+        return JSONResponse([
+            {
+                "id":          ex.id,
+                "chapter_id":  ex.chapter_id,
+                "title":       ex.title,
+                "description": ex.description or "",
+                "level":       ch.level or "N5",
+                "order_index": ex.order_index,
+            }
+            for ex, ch in exercises
+        ])
+    finally:
+        db.close()
