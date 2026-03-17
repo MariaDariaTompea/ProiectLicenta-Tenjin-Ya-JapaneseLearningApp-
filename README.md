@@ -1,139 +1,87 @@
-# JapaneseApp
+# Tenjin'ya (天神屋) — Innovative Japanese Language Learning
 
-## Overview
-JapaneseApp is a comprehensive web application designed to help users learn Japanese language and culture interactively. Built with FastAPI, SQLAlchemy, and PostgreSQL, it offers a variety of exercises, achievements, customizable profiles, and multimedia resources (audio, images, videos) to enhance the learning experience.
-
----
-
-## Basic Concept
-The app provides:
-- **Language Learning:** Hiragana, Katakana, and Japanese vocabulary exercises.
-- **User Profiles:** Customizable avatars, settings, unlockable achievements and banners.
-- **Courses:** Structured learning paths for Japanese language and culture.
-- **Achievements:** Track progress and unlock rewards.
-- **Multimedia:** Audio, images, and videos for immersive learning.
-- **Authentication:** Secure user login and profile management.
+Tenjin'ya is an advanced language learning application designed to provide a comprehensive and immersive path to Japanese fluency. By focusing on the foundational elements of the language—starting with its unique writing systems—and integrating cultural context, Tenjin'ya bridges the gap between mechanical memorization and true linguistic comprehension.
 
 ---
 
-## Main Files & Structure
+## 🎨 Concept & Philosophy
 
-### Root Directory
-- `database.py`: Sets up the SQLAlchemy engine, session, and base for database models. Connects to PostgreSQL.
-- `main.py`: FastAPI app entrypoint. Mounts static files, includes routers, and starts the server.
+Through testing and analysis of existing platforms like Duolingo, HelloTalk, and Shinobi, Tenjin'ya identifies and addresses three critical limitations in modern language learning apps:
 
-### JapaneseApp/
-- `database.py`: Duplicate of root, used for internal imports.
-- `main.py`: Main FastAPI app logic.
-- `routes/`: Contains route files for different app features.
-  - `auth_routes.py`: Authentication endpoints (login, register).
-  - `profile_routes.py`: User profile management.
-  - `course_routes.py`: Course and learning path endpoints.
-  - `japanese_routes.py`: Japanese language exercises and content.
-  - `__init__.py`: Combines all routers for inclusion in the app.
-- `models/`: SQLAlchemy models for database tables.
-  - `achievement.py`: Achievement model.
-  - `exercises.py`: Exercise model.
-  - `japanese.py`: Japanese language model.
-  - `user.py`: User model.
-  - `__init__.py`: Model package initializer.
-- `templates/`: Template files for rendering responses.
-  - `achievements_templates.py`: Achievement-related templates.
-  - `auth_templates.py`: Authentication templates.
-  - `hiragana_templates.py`: Hiragana learning templates.
-  - `katakana_templates.py`: Katakana learning templates.
-  - `profile_templates.py`: Profile templates.
-  - `__init__.py`: Template package initializer.
-- `audio/`, `images/`, `icons/`, `textures/`, `videos/`: Static directories for multimedia assets.
-- `katakana_assets/`: Additional multimedia for Katakana learning.
-- `customisableprofile/`: Avatars, settings, achievements, banners for user customization.
+### 1. Writing System Mastery (Hiragana, Katakana, Kanji)
+Most apps skip the arduous task of teaching characters, forcing learners to jump directly into vocabulary using Latin transliterations (Romaji). Tenjin'ya prioritizes **Character Mastery**. It provides dedicated modules to visualize, practice, and recognize Hiragana, Katakana, and Kanji before moving to advanced grammar. We believe that a strong foundation in the writing system is essential for efficient long-term acquisition.
+
+### 2. Achievement-Based Motivation vs. Toxic Competition
+Many apps use "streaks" and competitive leaderboards that eventually pressure users to "cheat" the system for points rather than focusing on learning. 
+Tenjin'ya introduces a **Personal Achievement System**. Instead of competing against others, users unlock unique achievements by completing missions and mastering chapters at their own pace. This maintains high engagement through personal growth rather than stressful comparison.
+
+### 3. Cultural Context & Nuance
+Language does not exist in a vacuum. Most apps neglect the cultural nuances that dictate how Japanese is actually spoken—such as honorifics and social hierarchy. Tenjin'ya includes **Interactive Cultural Learning Modules** that explain the "why" behind expressions, helping learners communicate appropriately in real-world Japanese society.
 
 ---
 
-## Key Technologies
-- **FastAPI:** Web framework for building APIs.
-- **SQLAlchemy:** ORM for database models and queries.
-- **PostgreSQL:** Database backend.
-- **Uvicorn:** ASGI server for running FastAPI.
-- **psycopg2-binary:** PostgreSQL driver.
+## 🏗️ Technical Architecture
+
+### **The Backend: FastAPI & Uvicorn**
+Tenjin'ya is powered by **FastAPI**, a modern, high-performance Python web framework. 
+- **Asynchronous Processing:** Built on the **ASGI** standard, FastAPI handles multiple requests concurrently, ensuring a snappy user experience.
+- **Automatic Documentation:** Provides interactive API docs (Swagger/OpenAPI) at `/docs` for seamless testing.
+- **Uvicorn:** A lightning-fast ASGI server that hosts the application and handles communication between the app and the web.
+
+### **Database Strategy: Supabase & PostgreSQL**
+Rather than a local file, Tenjin'ya utilizes a cloud-hosted **PostgreSQL** database managed by **Supabase**.
+- **PostgreSQL:** An industry-standard relational database (RDBMS) known for its reliability, concurrency control, and support for complex data types.
+- **Cloud Hosting:** By using Supabase, the data is accessible, secure, and independent of local hardware.
+
+### **Data Layer: SQLAlchemy ORM**
+The application uses **SQLAlchemy** as an Object-Relational Mapping (ORM) layer.
+- **Abstraction:** Database tables are defined as Python classes, allowing us to perform operations using clean Python code instead of raw SQL.
+- **Security:** Built-in protection against SQL injection and improved maintainability.
 
 ---
 
-## How It Works
-1. **User Authentication:** Users register and log in. Profiles are created and managed.
-2. **Learning Modules:** Users access courses, exercises, and multimedia content.
-3. **Progress Tracking:** Achievements and progress are tracked in the database.
-4. **Customization:** Users unlock avatars, banners, and achievements.
-5. **Static Files:** Multimedia assets are served for interactive learning.
+## 📂 Project Structure (Feature-Based)
+
+The codebase follows a modular **Feature-Based Architecture**, making it easy to extend for new languages or modules:
+
+- **`core/`**: Central application logic, database connection handling (`database.py`), and foundational settings.
+- **`features/`**:
+  - **`grammar/`**: Routes and logic for the curriculum, including the horizontal "Belt" navigation system.
+  - **`customization/`**: User profile management, avatar uploads, and achievement tracking.
+- **`static/`**: Centralized storage for multimedia assets including:
+  - `/images` & `/textures`: High-quality UI elements and backgrounds.
+  - `/audio`: Native pronunciation guides.
+  - `/videos`: Character stroke animations (e.g., the running fox transitions).
 
 ---
 
-## App Startup
-- The app is started via `main.py` or with Uvicorn:
-  ```bash
-  python JapaneseApp/main.py
-  # or
-  uvicorn JapaneseApp.main:app --reload
-  ```
-- Static files are mounted for easy access.
-- Routers are included for modular API endpoints.
+## 🚀 Getting Started
+
+### **Prerequisites**
+- Python 3.12+
+- Virtual environment (`.venv`)
+
+### **Execution**
+To start the application locally:
+```bash
+# Activate your environment
+.venv\Scripts\activate
+
+# Run the server
+python -m uvicorn main:app --port 8000 --reload
+```
+The app will be available at `http://127.0.0.1:8000`.
 
 ---
 
-## Database
-- Connection string is set in `database.py`.
-- Models define tables for users, achievements, exercises, etc.
-- Uses SQLAlchemy ORM for queries and migrations.
+## 📚 References
+
+The development of Tenjin'ya was informed by key research in Mobile Assisted Language Learning (MALL) and Gamification:
+
+- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning: From content delivery to supported collaboration and interaction.* ReCALL Journal.
+- **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.* Proceedings of the 15th International Academic MindTrek Conference.
+- **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.* City University of New York.
 
 ---
 
-## Customization & Achievements
-- Users can customize their profile with avatars, banners, and unlockable achievements.
-- Achievements are tracked and displayed.
-
----
-
-## Multimedia
-- Audio, images, and videos are used for immersive learning.
-- Katakana and Hiragana assets are separated for focused study.
-
----
-
-## Templates
-- Templates render responses for achievements, authentication, hiragana, katakana, and profiles.
-
----
-
-## Routes
-- `/auth`: Authentication endpoints.
-- `/profile`: Profile management.
-- `/course`: Course and learning path endpoints.
-- `/japanese`: Japanese language exercises.
-- `/images`, `/audio`, `/icons`, `/textures`, `/videos`: Static file endpoints.
-
----
-
-## Extending the App
-- Add new models in `models/`.
-- Add new routes in `routes/`.
-- Add new templates in `templates/`.
-- Add new static assets in their respective directories.
-
----
-
-## Troubleshooting
-- Ensure all dependencies are installed: `fastapi`, `uvicorn`, `sqlalchemy`, `psycopg2-binary`.
-- Check database connection string in `database.py`.
-- Run the app with Uvicorn for live reload and debugging.
-- Static files must exist in their directories to avoid errors.
-
----
-
-## License & Credits
-- Open source project for educational purposes.
-- Built with FastAPI, SQLAlchemy, and PostgreSQL.
-
----
-
-## Contact
-For questions or contributions, open an issue or contact the maintainer.
+*“Evolution and justification through well-crafted aesthetics — Tenjin'ya is about helping people achieve the linguistic results they actually want.”*
