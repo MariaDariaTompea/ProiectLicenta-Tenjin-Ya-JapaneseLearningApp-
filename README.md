@@ -75,7 +75,7 @@ To run the server locally:
 
 Our improvements were driven by observations of modern language trends—such as the massive rise in Chinese and Japanese speakers in 2025—and studies on effective acquisition:
 
-- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.
+- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.s
 - **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
 - **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
 

@@ -25,6 +25,22 @@ class User(Base):
     equipped_achievement_3 = Column(Integer, ForeignKey("achievements.id"), nullable=True)
 
 
+class StatusLearning(Base):
+    """Tracks a user's learning progress separately across modules"""
+    __tablename__ = "status_learning"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    
+    status_chapter_overall = Column(Integer, default=1, nullable=False, server_default="1")
+    
+    status_chapter_grammar = Column(Integer, default=1, nullable=False, server_default="1")
+    status_exercise_grammar = Column(Integer, default=1, nullable=False, server_default="1")
+    
+    status_chapter_vocabulary = Column(Integer, default=1, nullable=False, server_default="1")
+    status_exercise_vocabulary = Column(Integer, default=1, nullable=False, server_default="1")
+
+
 class UserItem(Base):
     """Items (achievements, banners, icons) owned by a user"""
     __tablename__ = "user_items"

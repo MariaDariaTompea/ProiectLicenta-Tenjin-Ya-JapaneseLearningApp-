@@ -378,18 +378,22 @@ async def welcome():
 
 @router.get("/api/grammar/user-status")
 async def grammar_user_status(request: Request):
-    """Return the current user's status_chapter and status_exercise."""
+    """Return the current user's grammar status."""
     email = request.cookies.get("user_email")
     if not email:
         return JSONResponse({"status_chapter": 1, "status_exercise": 1})
     db = SessionLocal()
     try:
+        from features.user.models import User, StatusLearning
         user = db.query(User).filter(User.email == email).first()
         if not user:
             return JSONResponse({"status_chapter": 1, "status_exercise": 1})
+        status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
+        if not status:
+            return JSONResponse({"status_chapter": user.status_chapter or 1, "status_exercise": user.status_exercise or 1})
         return JSONResponse({
-            "status_chapter":  user.status_chapter  or 1,
-            "status_exercise": user.status_exercise or 1,
+            "status_chapter":  status.status_chapter_grammar  or 1,
+            "status_exercise": status.status_exercise_grammar or 1,
         })
     finally:
         db.close()
@@ -2315,30 +2319,10 @@ async def course_vocabulary():
     """
 
 
-@router.get("/course/vocabulary/exercise/{exercise_id}", response_class=HTMLResponse)
-async def vocabulary_exercise_page(exercise_id: int):
+@router.get("/course/vocabulary/Chapter{chapter_index}/exercise{exercise_index}", response_class=HTMLResponse)
+async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
     """Exercise page for vocabulary. The first exercise of the first vocab chapter = writing system picker."""
-    db = SessionLocal()
-    try:
-        ex = db.query(Exercise).filter(Exercise.id == exercise_id).first()
-        # Find the very first exercise of the first vocabulary chapter
-        first_vocab_ch = (
-            db.query(Chapter)
-            .filter(Chapter.category == "vocabulary")
-            .order_by(Chapter.order_index)
-            .first()
-        )
-        first_ex = None
-        if first_vocab_ch:
-            first_ex = (
-                db.query(Exercise)
-                .filter(Exercise.chapter_id == first_vocab_ch.id)
-                .order_by(Exercise.order_index)
-                .first()
-            )
-        is_writing_systems = first_ex and ex and ex.id == first_ex.id
-    finally:
-        db.close()
+    is_writing_systems = (chapter_index == 1 and exercise_index == 1)
 
     if is_writing_systems:
         return r"""
@@ -2556,11 +2540,11 @@ async def vocabulary_exercise_page(exercise_id: int):
     # Generic placeholder for other exercises
     return HTMLResponse(f"""
     <!DOCTYPE html><html lang="en"><head>
-    <meta charset="UTF-8"><title>Vocabulary Exercise {exercise_id}</title>
+    <meta charset="UTF-8"><title>Vocabulary Chapter {chapter_index} - Exercise {exercise_index}</title>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <style>body{{font-family:'Playfair Display',serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#0d0608;color:#FCBCD7;gap:24px;opacity:0;transition:opacity 0.8s ease;}}body.loaded{{opacity:1;}}a{{color:#E56AB3;text-decoration:none;font-size:14px;letter-spacing:1px;}}</style>
     </head><body>
-    <h1 style="font-size:48px">Exercise {exercise_id}</h1>
+    <h1 style="font-size:48px">Exercise {exercise_index}</h1>
     <p style="font-size:18px;opacity:.6">Vocabulary exercise content coming soon.</p>
     <a href="/course/vocabulary">← Back to Vocabulary</a>
     <script>window.addEventListener('load',()=>document.body.classList.add('loaded'));</script>
@@ -2616,7 +2600,32 @@ async def settings_page():
 
 @router.get("/api/vocabulary/user-status")
 async def vocabulary_user_status(request: Request):
-    return await grammar_user_status(request)
+    """Return the current user's vocabulary status."""
+    email = request.cookies.get("user_email")
+    if not email:
+        # Default first vocab exercise is id=3
+        return JSONResponse({"status_chapter": 1, "status_exercise": 3})
+    db = SessionLocal()
+    try:
+        from features.user.models import User, StatusLearning
+        from features.grammar.models import Chapter, Exercise
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return JSONResponse({"status_chapter": 1, "status_exercise": 3})
+            
+        status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
+        if not status:
+            # Fallback if unmigrated
+            first_v_ch = db.query(Chapter).filter(Chapter.category == "vocabulary").order_by(Chapter.order_index).first()
+            first_v_ex = db.query(Exercise).filter(Exercise.chapter_id == first_v_ch.id).order_by(Exercise.order_index).first() if first_v_ch else None
+            return JSONResponse({"status_chapter": first_v_ch.id if first_v_ch else 1, "status_exercise": first_v_ex.id if first_v_ex else 3})
+            
+        return JSONResponse({
+            "status_chapter":  status.status_chapter_vocabulary,
+            "status_exercise": status.status_exercise_vocabulary,
+        })
+    finally:
+        db.close()
 
 @router.get("/api/vocabulary/chapter/{chapter_id}")
 async def vocabulary_chapter(chapter_id: int):
@@ -2679,6 +2688,7 @@ async def vocabulary_all_exercises():
                 "description": ex.description or "",
                 "level":       ch.level or "N5",
                 "order_index": ex.order_index,
+                "chapter_index": ch.order_index,
             }
             for ex, ch in exercises
         ])

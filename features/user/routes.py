@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from core.database import SessionLocal
-from features.user.models import User
+from features.user.models import User, StatusLearning
 from features.user.templates.auth import get_login_page_html, get_register_page_html
 import hashlib
 
@@ -74,6 +74,17 @@ def register(user: UserRegister):
         current_level="N5"
     )
     db.add(new_user)
+    db.flush() # flush to get new_user.id
+    
+    new_status = StatusLearning(
+        user_id=new_user.id,
+        status_chapter_overall=1,
+        status_chapter_grammar=1,
+        status_exercise_grammar=1,
+        status_chapter_vocabulary=1,
+        status_exercise_vocabulary=1
+    )
+    db.add(new_status)
     db.commit()
     db.close()
     return {"message": "User registered successfully", "email": user.email}

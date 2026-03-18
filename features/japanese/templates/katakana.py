@@ -268,8 +268,8 @@ def get_katakana_table_html(katakana_list):
                 function goBack() {
                     document.getElementById('pageFade').classList.add('active');
                     setTimeout(() => {
-                        window.location.href = '/welcome#selection';
-                    }, 650);
+                        window.location.href = '/course/vocabulary';
+                    }, 500);
                 }
             </script>
         </body>
