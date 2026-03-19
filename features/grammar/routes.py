@@ -1078,11 +1078,11 @@ async def course_grammar():
                                 ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
                             </span>`;
                         li.addEventListener('click', () => {
-                            window.location.href = `/course/grammar/exercise/${ex.id}`;
+                            window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
                         });
                         li.addEventListener('keydown', e => {
                             if (e.key === 'Enter' || e.key === ' ')
-                                window.location.href = `/course/grammar/exercise/${ex.id}`;
+                                window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
                         });
                         ul.appendChild(li);
                     });
@@ -1191,7 +1191,7 @@ async def course_grammar():
                     if (elapsed < 280) {
                         // SHORT click → navigate
                         clearPreview();
-                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                     // longer hold → panel already updated, do nothing else
                 }
@@ -1217,13 +1217,13 @@ async def course_grammar():
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 280) {
                         clearPreview();
-                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
 
                 nodeEl.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                        window.location.href = `/course/grammar/exercise/${ex.id}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
             }
@@ -1338,26 +1338,27 @@ async def course_grammar():
                     // Fallback: if no DB exercises yet, use a placeholder list
                     if (!EXERCISES || EXERCISES.length === 0) {
                         EXERCISES = [
-                            {id:1,chapter_id:1,title:'は & が',level:'N5',description:'Topic vs. subject markers.'},
-                            {id:2,chapter_id:1,title:'です/ます',level:'N5',description:'Polite verb endings.'},
-                            {id:3,chapter_id:1,title:'に & で',level:'N5',description:'Location and direction particles.'},
-                            {id:4,chapter_id:1,title:'を particle',level:'N5',description:'Direct object marker.'},
-                            {id:5,chapter_id:2,title:'て-form',level:'N5',description:'Connecting verbs in sequence.'},
-                            {id:6,chapter_id:2,title:'た-form',level:'N5',description:'Past tense.'},
-                            {id:7,chapter_id:2,title:'ない-form',level:'N5',description:'Negative plain form.'},
-                            {id:8,chapter_id:2,title:'Adj い/な',level:'N5',description:'Adjective conjugation.'},
-                            {id:9,chapter_id:3,title:'から & まで',level:'N5',description:'From / until.'},
-                            {id:10,chapter_id:3,title:'も particle',level:'N5',description:'Also / too.'},
-                            {id:11,chapter_id:3,title:'と particle',level:'N4',description:'And / with.'},
-                            {id:12,chapter_id:3,title:'Conditional',level:'N4',description:'If/when forms.'},
-                            {id:13,chapter_id:4,title:'て-いる',level:'N4',description:'Progressive state.'},
-                            {id:14,chapter_id:4,title:'Passive',level:'N4',description:'Actions done to the subject.'},
-                            {id:15,chapter_id:4,title:'Causative',level:'N4',description:'Make or let someone do.'},
-                            {id:16,chapter_id:4,title:'Potential',level:'N4',description:'Ability and possibility.'},
-                            {id:17,chapter_id:5,title:'Volitional',level:'N4',description:"Let's do — よう / ましょう."},
-                            {id:18,chapter_id:5,title:'のに & のが',level:'N4',description:'Nominalising verbs.'},
-                            {id:19,chapter_id:5,title:'ために',level:'N3',description:'Purpose — in order to.'},
-                            {id:20,chapter_id:5,title:'ながら',level:'N3',description:'Simultaneous actions.'},
+                            {id:1,chapter_id:1,title:'Particle Wa',level:'N5',description:'Learn about how japanese highlights subjects', chapter_index: 1, order_index: 1},
+                            {id:2,chapter_id:1,title:'Desu verb',level:'N5',description:'', chapter_index: 1, order_index: 2},
+                            {id:3,chapter_id:1,title:'Hour in japanese',level:'N5',description:'', chapter_index: 1, order_index: 3},
+                            {id:4,chapter_id:1,title:'Prices in japanese',level:'N5',description:'', chapter_index: 1, order_index: 4},
+                            {id:5,chapter_id:1,title:'evaluation capters 1-4',level:'N5',description:'', chapter_index: 1, order_index: 5},
+                            {id:6,chapter_id:1,title:'Describing clothes',level:'N5',description:'', chapter_index: 1, order_index: 6},
+                            {id:7,chapter_id:1,title:'Basic adjectives List',level:'N5',description:'', chapter_index: 1, order_index: 7},
+                            {id:8,chapter_id:1,title:'Basic adjective list (part2)',level:'N5',description:'', chapter_index: 1, order_index: 8},
+                            {id:9,chapter_id:1,title:'Basic japanese verbs',level:'N5',description:'', chapter_index: 1, order_index: 9},
+                            {id:10,chapter_id:1,title:'Particle Mo',level:'N5',description:'', chapter_index: 1, order_index: 10},
+                            {id:11,chapter_id:1,title:'"And" / "Or"',level:'N5',description:'', chapter_index: 1, order_index: 11},
+                            {id:12,chapter_id:1,title:'Describe distance',level:'N5',description:'Use of kono, ano etc.', chapter_index: 1, order_index: 12},
+                            {id:13,chapter_id:1,title:'Verb Conjugation',level:'N5',description:'', chapter_index: 1, order_index: 13},
+                            {id:14,chapter_id:1,title:'Present Tense',level:'N5',description:'', chapter_index: 1, order_index: 14},
+                            {id:15,chapter_id:1,title:'Verb Particles, Word Order',level:'N5',description:'', chapter_index: 1, order_index: 15},
+                            {id:16,chapter_id:1,title:'Genneral Examination 1-14',level:'N5',description:'', chapter_index: 1, order_index: 16},
+                            {id:17,chapter_id:1,title:'Past Tense of Desu',level:'N5',description:'', chapter_index: 1, order_index: 17},
+                            {id:18,chapter_id:1,title:'Past tense of verbs',level:'N5',description:'', chapter_index: 1, order_index: 18},
+                            {id:19,chapter_id:1,title:'Past tense of verbs (part 2)',level:'N5',description:'', chapter_index: 1, order_index: 19},
+                            {id:20,chapter_id:1,title:'Practice verbs',level:'N5',description:'', chapter_index: 1, order_index: 20},
+                            {id:21,chapter_id:1,title:'Final examination chapter 1',level:'N5',description:'', chapter_index: 1, order_index: 21},
                         ];
                     }
 
@@ -1995,11 +1996,11 @@ async def course_vocabulary():
                                 ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
                             </span>`;
                         li.addEventListener('click', () => {
-                            window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                            window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
                         });
                         li.addEventListener('keydown', e => {
                             if (e.key === 'Enter' || e.key === ' ')
-                                window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                                window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
                         });
                         ul.appendChild(li);
                     });
@@ -2108,7 +2109,7 @@ async def course_vocabulary():
                     if (elapsed < 280) {
                         // SHORT click → navigate
                         clearPreview();
-                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                     // longer hold → panel already updated, do nothing else
                 }
@@ -2134,13 +2135,13 @@ async def course_vocabulary():
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 280) {
                         clearPreview();
-                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
 
                 nodeEl.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                        window.location.href = `/course/vocabulary/exercise/${ex.id}`;
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
             }
@@ -2255,26 +2256,16 @@ async def course_vocabulary():
                     // Fallback: if no DB exercises yet, use a placeholder list
                     if (!EXERCISES || EXERCISES.length === 0) {
                         EXERCISES = [
-                            {id:1,chapter_id:1,title:'は & が',level:'N5',description:'Topic vs. subject markers.'},
-                            {id:2,chapter_id:1,title:'です/ます',level:'N5',description:'Polite verb endings.'},
-                            {id:3,chapter_id:1,title:'に & で',level:'N5',description:'Location and direction particles.'},
-                            {id:4,chapter_id:1,title:'を particle',level:'N5',description:'Direct object marker.'},
-                            {id:5,chapter_id:2,title:'て-form',level:'N5',description:'Connecting verbs in sequence.'},
-                            {id:6,chapter_id:2,title:'た-form',level:'N5',description:'Past tense.'},
-                            {id:7,chapter_id:2,title:'ない-form',level:'N5',description:'Negative plain form.'},
-                            {id:8,chapter_id:2,title:'Adj い/な',level:'N5',description:'Adjective conjugation.'},
-                            {id:9,chapter_id:3,title:'から & まで',level:'N5',description:'From / until.'},
-                            {id:10,chapter_id:3,title:'も particle',level:'N5',description:'Also / too.'},
-                            {id:11,chapter_id:3,title:'と particle',level:'N4',description:'And / with.'},
-                            {id:12,chapter_id:3,title:'Conditional',level:'N4',description:'If/when forms.'},
-                            {id:13,chapter_id:4,title:'て-いる',level:'N4',description:'Progressive state.'},
-                            {id:14,chapter_id:4,title:'Passive',level:'N4',description:'Actions done to the subject.'},
-                            {id:15,chapter_id:4,title:'Causative',level:'N4',description:'Make or let someone do.'},
-                            {id:16,chapter_id:4,title:'Potential',level:'N4',description:'Ability and possibility.'},
-                            {id:17,chapter_id:5,title:'Volitional',level:'N4',description:"Let's do — よう / ましょう."},
-                            {id:18,chapter_id:5,title:'のに & のが',level:'N4',description:'Nominalising verbs.'},
-                            {id:19,chapter_id:5,title:'ために',level:'N3',description:'Purpose — in order to.'},
-                            {id:20,chapter_id:5,title:'ながら',level:'N3',description:'Simultaneous actions.'},
+                            {id:1,chapter_id:1,title:'Learn about writing systems',level:'N5',description:'Hiragana, Katakana, and Kanji tables.', chapter_index: 1, order_index: 1},
+                            {id:2,chapter_id:1,title:'Common Greetings',level:'N5',description:'Basic daily interactions.', chapter_index: 1, order_index: 2},
+                            {id:3,chapter_id:1,title:'Numbers 1-100',level:'N5',description:'Cardinal numbers in Japanese.', chapter_index: 1, order_index: 3},
+                            {id:4,chapter_id:2,title:'Family Members',level:'N5',description:'Terms for relatives.', chapter_index: 2, order_index: 1},
+                            {id:5,chapter_id:2,title:'Colors & Shapes',level:'N5',description:'Visual descriptors.', chapter_index: 2, order_index: 2},
+                            {id:6,chapter_id:2,title:'Time & Days',level:'N5',description:'Temporal vocabulary.', chapter_index: 2, order_index: 3},
+                            {id:7,chapter_id:3,title:'Food & Drinks',level:'N4',description:'Restaurant and kitchen terms.', chapter_index: 3, order_index: 1},
+                            {id:8,chapter_id:3,title:'Body Parts',level:'N4',description:'Anatomy and health.', chapter_index: 3, order_index: 2},
+                            {id:9,chapter_id:4,title:'Emotions',level:'N4',description:'Feelings and states of mind.', chapter_index: 4, order_index: 1},
+                            {id:10,chapter_id:5,title:'Travel & Directions',level:'N3',description:'Map and station phrases.', chapter_index: 5, order_index: 1},
                         ];
                     }
 
@@ -2318,6 +2309,21 @@ async def course_vocabulary():
     </html>
     """
 
+
+@router.get("/course/grammar/Chapter{chapter_index}/exercise{exercise_index}", response_class=HTMLResponse)
+async def grammar_exercise_page(chapter_index: int, exercise_index: int):
+    """Placeholder for grammar exercises."""
+    return f"""
+    <html>
+    <head><title>Grammar Exercise - Tenjin-Ya</title></head>
+    <body style="background:#0d0608; color:#FCBCD7; font-family:sans-serif; text-align:center; padding-top:100px;">
+        <h1 style="color:#FF9D9D;">Grammar Practice</h1>
+        <p>Chapter {chapter_index}, Exercise {exercise_index}</p>
+        <p>This section is coming soon!</p>
+        <a href="/course/grammar" style="color:#EF87BE; text-decoration:none; border:1px solid #EF87BE; padding:10px 20px; border-radius:30px;">Back to Grammar</a>
+    </body>
+    </html>
+    """
 
 @router.get("/course/vocabulary/Chapter{chapter_index}/exercise{exercise_index}", response_class=HTMLResponse)
 async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
