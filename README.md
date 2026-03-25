@@ -80,3 +80,72 @@ Our improvements were driven by observations of modern language trends—such as
 - **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
 
 *“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
+
+---
+
+## 🗄️ Database Restructuring (March 2025)
+
+The database has been restructured for better scalability and separation of concerns.
+
+### What Changed
+
+| Before | After |
+|--------|-------|
+| `users` table held avatar, banner, achievements, and progress | `users` simplified to core account data only |
+| No dedicated profile storage | **New `user_profiles` table** — avatar, banner, equipped achievements |
+| No photo upload tracking | **New `user_photos` table** — uploaded images with type and timestamp |
+| Chapters had a `level` text field and `image_url` | **New `proficiencies` table** (N5→N1) — chapters reference `proficiency_id` |
+| Tests had rigid `option_a/b/c/d` columns | Tests use flexible `options` JSON + `test_type` field |
+
+### New Schema Hierarchy
+
+```
+Proficiency (N5, N4, N3, N2, N1)
+  └── Chapter (grammar / vocabulary / culture)
+        └── Exercise (quiz, course, examination, interactive)
+              └── Test (multiple_choice, sentence_builder, matching, text_input, fill_blank, true_false)
+```
+
+### Tables Overview
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Core account: email, name, password, nickname, current_level |
+| `user_profiles` | Avatar URL, banner URL, 3 equipped achievement slots |
+| `user_photos` | Tracks uploaded photos (type: avatar/banner/gallery) |
+| `user_items` | Inventory of owned items (achievements, banners) |
+| `status_learning` | Per-module progress (grammar chapter/exercise, vocabulary chapter/exercise) |
+| `proficiencies` | JLPT levels: N5 (Beginner) → N1 (Advanced) |
+| `chapters` | Grouped under proficiency, categorised as grammar/vocabulary/culture |
+| `exercises` | Inside chapters, with exercise_type and XP points |
+| `tests` | Individual questions with flexible JSON options, test_type determines UI |
+| `achievements` | Collectible items with name, description, image |
+
+---
+
+## 🎮 Exercise System Architecture (Planned)
+
+The exercise runner will support Duolingo-style interactive question types for grammar exercises.
+
+### Supported Test Types
+
+| Type | Description |
+|------|-------------|
+| `multiple_choice` | Pick the correct answer from 4 options |
+| `sentence_builder` | Arrange word blocks into the correct sentence |
+| `matching` | Match pairs (Japanese ↔ English) |
+| `text_input` | Type the answer freely |
+| `fill_blank` | Complete a sentence with the missing word |
+| `true_false` | True or false statement |
+
+### Implementation Structure
+
+```
+features/exercises/
+├── routes.py              — /exercise/{id} unified endpoint
+├── renderer.py            — one render function per test_type
+└── templates/
+    └── exercise_runner.py — lesson page with progress bar and results
+```
+
+Each `Test` row in the database has a `test_type` that tells the frontend which renderer to use, and an `options` JSON column with type-specific data. Adding a new exercise type only requires adding a new render function and registering it.

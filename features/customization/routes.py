@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, Cookie, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from pydantic import BaseModel
 from core.database import SessionLocal
-from features.user.models import User, UserItem
+from features.user.models import User, UserProfile, UserItem, UserPhoto
 from features.customization.models import Achievement
 from features.customization.templates.profile import get_profile_page_html
 from features.customization.templates.achievements import get_achievements_page_html
@@ -12,10 +12,27 @@ import shutil
 import os
 import hashlib
 from typing import Optional
+from datetime import datetime
 
 router = APIRouter()
 
 os.makedirs("customisableprofile/avatars", exist_ok=True)
+
+
+# ── Helper to get user + profile ──
+def _get_user_and_profile(db, user_email):
+    """Return (user, profile) or raise."""
+    db_user = db.query(User).filter(User.email == user_email).first()
+    if not db_user:
+        return None, None
+    profile = db.query(UserProfile).filter(UserProfile.user_id == db_user.id).first()
+    if not profile:
+        # Auto-create profile if missing (migration safety)
+        profile = UserProfile(user_id=db_user.id)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    return db_user, profile
 
 
 # ── Profile page ──
@@ -24,7 +41,7 @@ def profile_page(request: Request, user_email: Optional[str] = Cookie(None)):
     if not user_email:
         return RedirectResponse(url="/login", status_code=303)
     db = SessionLocal()
-    db_user = db.query(User).filter(User.email == user_email).first()
+    db_user, profile = _get_user_and_profile(db, user_email)
     if not db_user:
         db.close()
         return RedirectResponse(url="/login", status_code=303)
@@ -33,7 +50,7 @@ def profile_page(request: Request, user_email: Optional[str] = Cookie(None)):
     default_ach = {"name": "Empty Slot", "description": "Equip an achievement you own",
                    "image_url": "/customisableprofile/defaultsettings/defaultgem.png", "earned": False}
     achievements = []
-    for slot_col in [db_user.equipped_achievement_1, db_user.equipped_achievement_2, db_user.equipped_achievement_3]:
+    for slot_col in [profile.equipped_achievement_1, profile.equipped_achievement_2, profile.equipped_achievement_3]:
         if slot_col:
             ach = db.query(Achievement).filter(Achievement.id == slot_col).first()
             if ach:
@@ -61,8 +78,8 @@ def profile_page(request: Request, user_email: Optional[str] = Cookie(None)):
     return get_profile_page_html(
         user_name=db_user.name,
         nickname=db_user.nickname or db_user.name,
-        avatar_url=db_user.avatar_url or "/customisableprofile/defaultsettings/profileicondefault.png",
-        banner_url=db_user.banner_url or "/customisableprofile/defaultsettings/bannerdefault.png",
+        avatar_url=profile.avatar_url or "/customisableprofile/defaultsettings/profileicondefault.png",
+        banner_url=profile.banner_url or "/customisableprofile/defaultsettings/bannerdefault.png",
         user_email=db_user.email,
         current_level=db_user.current_level or "N5",
         achievements=achievements,
@@ -108,7 +125,7 @@ async def update_avatar(avatar: UploadFile = File(...), user_email: Optional[str
     if not user_email:
         raise HTTPException(status_code=401, detail="Not logged in")
     db = SessionLocal()
-    db_user = db.query(User).filter(User.email == user_email).first()
+    db_user, profile = _get_user_and_profile(db, user_email)
     if not db_user:
         db.close()
         raise HTTPException(status_code=404, detail="User not found")
@@ -122,7 +139,12 @@ async def update_avatar(avatar: UploadFile = File(...), user_email: Optional[str
         shutil.copyfileobj(avatar.file, f)
 
     avatar_url = f"/customisableprofile/avatars/{filename}"
-    db_user.avatar_url = avatar_url
+    profile.avatar_url = avatar_url
+
+    # Save photo record
+    photo = UserPhoto(user_id=db_user.id, photo_url=avatar_url, photo_type="avatar", uploaded_at=datetime.utcnow())
+    db.add(photo)
+
     db.commit()
     db.close()
     return JSONResponse({"avatar_url": avatar_url})
@@ -134,7 +156,7 @@ async def update_banner(banner: UploadFile = File(...), user_email: Optional[str
     if not user_email:
         raise HTTPException(status_code=401, detail="Not logged in")
     db = SessionLocal()
-    db_user = db.query(User).filter(User.email == user_email).first()
+    db_user, profile = _get_user_and_profile(db, user_email)
     if not db_user:
         db.close()
         raise HTTPException(status_code=404, detail="User not found")
@@ -148,7 +170,12 @@ async def update_banner(banner: UploadFile = File(...), user_email: Optional[str
         shutil.copyfileobj(banner.file, f)
 
     banner_url = f"/customisableprofile/avatars/{filename}"
-    db_user.banner_url = banner_url
+    profile.banner_url = banner_url
+
+    # Save photo record
+    photo = UserPhoto(user_id=db_user.id, photo_url=banner_url, photo_type="banner", uploaded_at=datetime.utcnow())
+    db.add(photo)
+
     db.commit()
     db.close()
     return JSONResponse({"banner_url": banner_url})
@@ -183,7 +210,7 @@ async def equip_banner(body: EquipBannerRequest, user_email: Optional[str] = Coo
     if not user_email:
         raise HTTPException(status_code=401, detail="Not logged in")
     db = SessionLocal()
-    db_user = db.query(User).filter(User.email == user_email).first()
+    db_user, profile = _get_user_and_profile(db, user_email)
     if not db_user:
         db.close()
         raise HTTPException(status_code=404, detail="User not found")
@@ -196,7 +223,7 @@ async def equip_banner(body: EquipBannerRequest, user_email: Optional[str] = Coo
         db.close()
         raise HTTPException(status_code=403, detail="You don't own this banner")
     banner_url = f"/customisableprofile/banners/{body.item_id}.png"
-    db_user.banner_url = banner_url
+    profile.banner_url = banner_url
     db.commit()
     db.close()
     return JSONResponse({"banner_url": banner_url})
@@ -214,7 +241,7 @@ async def equip_achievement(body: EquipAchievementRequest, user_email: Optional[
     if body.slot not in (0, 1, 2):
         raise HTTPException(status_code=400, detail="Slot must be 0, 1, or 2")
     db = SessionLocal()
-    db_user = db.query(User).filter(User.email == user_email).first()
+    db_user, profile = _get_user_and_profile(db, user_email)
     if not db_user:
         db.close()
         raise HTTPException(status_code=404, detail="User not found")
@@ -227,11 +254,11 @@ async def equip_achievement(body: EquipAchievementRequest, user_email: Optional[
         db.close()
         raise HTTPException(status_code=403, detail="You don't own this achievement")
     if body.slot == 0:
-        db_user.equipped_achievement_1 = body.achievement_id
+        profile.equipped_achievement_1 = body.achievement_id
     elif body.slot == 1:
-        db_user.equipped_achievement_2 = body.achievement_id
+        profile.equipped_achievement_2 = body.achievement_id
     else:
-        db_user.equipped_achievement_3 = body.achievement_id
+        profile.equipped_achievement_3 = body.achievement_id
     db.commit()
     db.close()
     return JSONResponse({"equipped": True, "slot": body.slot})

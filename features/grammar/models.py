@@ -2,28 +2,42 @@
 Exercise system models.
 
 Structure:
-  Chapter  (capitol)    — e.g. "Hiragana Basics", "Greetings N5"
-    └── Exercise (exercițiu) — e.g. "Write あ", "Translate 'hello'"
-          └── Test  (test)   — individual question/answer inside an exercise
+  Proficiency (JLPT level)  — e.g. N5, N4, N3, N2, N1
+    └── Chapter  (capitol)    — e.g. "Hiragana Basics", "Greetings N5"
+          └── Exercise (exercițiu) — e.g. "Hiragana & Katakana Course", "Vocabulary Quiz"
+                └── Test  (test)   — individual question/answer inside an exercise
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from core.database import Base
 
 
+class Proficiency(Base):
+    """A JLPT proficiency level — top-level grouping."""
+    __tablename__ = "proficiencies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    level = Column(String, unique=True, nullable=False)          # "N5", "N4", "N3", "N2", "N1"
+    name = Column(String, nullable=False, default="")            # e.g. "Beginner"
+    description = Column(Text, default="")                       # short description
+    order_index = Column(Integer, default=0)                     # display order (N5=1, N4=2 ...)
+
+    chapters = relationship("Chapter", back_populates="proficiency", order_by="Chapter.order_index")
+
+
 class Chapter(Base):
-    """A chapter / capitol — top-level grouping of exercises."""
+    """A chapter / capitol — groups exercises under a proficiency level."""
     __tablename__ = "chapters"
 
     id = Column(Integer, primary_key=True, index=True)
+    proficiency_id = Column(Integer, ForeignKey("proficiencies.id"), nullable=False)
     title = Column(String, nullable=False)                       # e.g. "Hiragana — Vocale"
     description = Column(Text, default="")                       # short description
-    category = Column(String, default="general")                 # grammar, vocabulary, culture, hiragana, katakana …
-    level = Column(String, default="N5")                         # JLPT level
+    category = Column(String, default="general")                 # grammar, vocabulary, culture
     order_index = Column(Integer, default=0)                     # display order
-    image_url = Column(String, default="")                       # optional chapter icon/banner
 
+    proficiency = relationship("Proficiency", back_populates="chapters")
     exercises = relationship("Exercise", back_populates="chapter", order_by="Exercise.order_index")
 
 
@@ -33,9 +47,9 @@ class Exercise(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
-    title = Column(String, nullable=False)                       # e.g. "Scrie caracterul あ"
+    title = Column(String, nullable=False)                       # e.g. "Hiragana & Katakana Course"
     description = Column(Text, default="")
-    exercise_type = Column(String, default="quiz")               # quiz, writing, listening, matching …
+    exercise_type = Column(String, default="quiz")               # quiz, course, examination, interactive
     order_index = Column(Integer, default=0)                     # display order inside chapter
     points = Column(Integer, default=10)                         # XP / points awarded
 
@@ -51,11 +65,8 @@ class Test(Base):
     exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
     question = Column(Text, nullable=False)                      # the question text or prompt
     correct_answer = Column(String, nullable=False)              # expected correct answer
-    option_a = Column(String, default="")                        # multiple-choice option A
-    option_b = Column(String, default="")                        # multiple-choice option B
-    option_c = Column(String, default="")                        # multiple-choice option C
-    option_d = Column(String, default="")                        # multiple-choice option D
-    test_type = Column(String, default="multiple_choice")        # multiple_choice, text_input, matching, drag_drop …
+    options = Column(Text, default="")                           # JSON string: ["opt1","opt2","opt3","opt4"]
+    test_type = Column(String, default="multiple_choice")        # multiple_choice, text_input, matching, drag_drop
     image_url = Column(String, default="")                       # optional image for the question
     audio_url = Column(String, default="")                       # optional audio clip
     order_index = Column(Integer, default=0)                     # display order inside exercise

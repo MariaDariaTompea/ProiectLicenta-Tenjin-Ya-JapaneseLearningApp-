@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from core.database import SessionLocal
-from features.user.models import User, StatusLearning
+from features.user.models import User, UserProfile, StatusLearning
 from features.user.templates.auth import get_login_page_html, get_register_page_html
 import hashlib
 
@@ -69,13 +69,20 @@ def register(user: UserRegister):
         name=user.name,
         password=hashed_password,
         nickname=user.name,
-        avatar_url="/customisableprofile/defaultsettings/profileicondefault.png",
-        banner_url="/customisableprofile/defaultsettings/bannerdefault.png",
         current_level="N5"
     )
     db.add(new_user)
-    db.flush() # flush to get new_user.id
-    
+    db.flush()  # flush to get new_user.id
+
+    # Create default profile (avatar, banner, no equipped achievements)
+    new_profile = UserProfile(
+        user_id=new_user.id,
+        avatar_url="/customisableprofile/defaultsettings/profileicondefault.png",
+        banner_url="/customisableprofile/defaultsettings/bannerdefault.png"
+    )
+    db.add(new_profile)
+
+    # Create learning status
     new_status = StatusLearning(
         user_id=new_user.id,
         status_chapter_overall=1,

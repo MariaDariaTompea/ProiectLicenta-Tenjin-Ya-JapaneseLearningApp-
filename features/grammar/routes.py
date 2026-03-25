@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from core.database import SessionLocal
 from features.user.models import User
-from features.grammar.models import Chapter, Exercise
+from features.grammar.models import Proficiency, Chapter, Exercise
 
 router = APIRouter()
 
@@ -390,7 +390,7 @@ async def grammar_user_status(request: Request):
             return JSONResponse({"status_chapter": 1, "status_exercise": 1})
         status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
         if not status:
-            return JSONResponse({"status_chapter": user.status_chapter or 1, "status_exercise": user.status_exercise or 1})
+            return JSONResponse({"status_chapter": 1, "status_exercise": 1})
         return JSONResponse({
             "status_chapter":  status.status_chapter_grammar  or 1,
             "status_exercise": status.status_exercise_grammar or 1,
@@ -407,6 +407,9 @@ async def grammar_chapter(chapter_id: int):
         chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
         if not chapter:
             raise HTTPException(status_code=404, detail="Chapter not found")
+        # Get proficiency level
+        prof = db.query(Proficiency).filter(Proficiency.id == chapter.proficiency_id).first()
+        level = prof.level if prof else "N5"
         exercises = (
             db.query(Exercise)
             .filter(Exercise.chapter_id == chapter_id)
@@ -418,7 +421,7 @@ async def grammar_chapter(chapter_id: int):
                 "id":          chapter.id,
                 "title":       chapter.title,
                 "description": chapter.description or "",
-                "level":       chapter.level or "N5",
+                "level":       level,
             },
             "exercises": [
                 {
@@ -453,8 +456,9 @@ async def grammar_all_exercises():
     db = SessionLocal()
     try:
         exercises = (
-            db.query(Exercise, Chapter)
+            db.query(Exercise, Chapter, Proficiency)
             .join(Chapter, Exercise.chapter_id == Chapter.id)
+            .join(Proficiency, Chapter.proficiency_id == Proficiency.id)
             .filter(Chapter.category == "grammar")
             .order_by(Chapter.order_index, Exercise.order_index)
             .all()
@@ -465,10 +469,11 @@ async def grammar_all_exercises():
                 "chapter_id":  ex.chapter_id,
                 "title":       ex.title,
                 "description": ex.description or "",
-                "level":       ch.level or "N5",
+                "level":       prof.level if prof else "N5",
                 "order_index": ex.order_index,
+                "chapter_index": ch.order_index,
             }
-            for ex, ch in exercises
+            for ex, ch, prof in exercises
         ])
     finally:
         db.close()
@@ -852,7 +857,7 @@ async def course_grammar():
                 <!-- populated by JS -->
                 <div class="left-empty" id="leftEmpty">
                     <div class="left-empty-icon">☁️</div>
-                    <div class="left-empty-text">Hold a level node<br>to preview its content</div>
+                    <div class="left-empty-text">Hover over a level node<br>to preview its content</div>
                 </div>
                 <div class="left-inner" id="leftInner" style="display:none">
                     <div class="info-eyebrow" id="infoEyebrow">Chapter</div>
@@ -1001,6 +1006,27 @@ async def course_grammar():
             /* ═══════════════════════════════════════════════════════
                LEFT PANEL RENDERING
             ═══════════════════════════════════════════════════════ */
+            function buildFallbackChapter(chapterId) {
+                // Build chapter info from the EXERCISES array when the API has no DB chapter
+                const chExs = EXERCISES.filter(e => e.chapter_id === chapterId);
+                const first = chExs[0] || {};
+                return {
+                    chapter: {
+                        id: chapterId,
+                        title: `Chapter ${first.chapter_index || chapterId}`,
+                        description: '',
+                        level: first.level || 'N5',
+                    },
+                    exercises: chExs.map(e => ({
+                        id: e.id,
+                        title: e.title,
+                        description: e.description || '',
+                        order_index: e.order_index,
+                        chapter_index: e.chapter_index || chapterId,
+                    }))
+                };
+            }
+
             async function showPanel(chapterId, currentExId) {
                 // Show spinner while loading
                 if (!panelCache[chapterId]) {
@@ -1015,8 +1041,8 @@ async def course_grammar():
                         if (!res.ok) throw new Error('not found');
                         panelCache[chapterId] = await res.json();
                     } catch {
-                        leftInner.innerHTML = '<div class="left-empty-text" style="opacity:.5;margin-top:40px">Could not load chapter info</div>';
-                        return;
+                        // Fallback: build panel data from loaded EXERCISES array
+                        panelCache[chapterId] = buildFallbackChapter(chapterId);
                     }
                 }
 
@@ -1153,7 +1179,7 @@ async def course_grammar():
             }
 
             /* ═══════════════════════════════════════════════════════
-               NODE  EVENTS  (hold = preview panel, click = navigate)
+               NODE  EVENTS  (hover = preview panel, click = navigate)
             ═══════════════════════════════════════════════════════ */
             function clearPreview() {
                 if (previewedNodeEl) {
@@ -1165,6 +1191,7 @@ async def course_grammar():
             }
 
             function setPreview(nodeEl, ex) {
+                if (previewedNodeEl === nodeEl) return; // already previewing this node
                 clearPreview();
                 previewedNodeEl = nodeEl;
                 nodeEl.classList.add('previewed');
@@ -1177,34 +1204,29 @@ async def course_grammar():
             function attachNodeEvents(nodeEl, ex) {
                 let localDownTime = 0;
 
+                // ── HOVER: update left panel on mouseenter ──
+                nodeEl.addEventListener('mouseenter', () => {
+                    setPreview(nodeEl, ex);
+                });
+
+                // ── CLICK: navigate to the exercise ──
                 function onDown(e) {
                     e.stopPropagation(); // don't start belt-drag from node
                     localDownTime = performance.now();
                     pointerDownTime = localDownTime;
-                    // immediately show preview on hold-start
-                    setPreview(nodeEl, ex);
                 }
 
                 function onUp() {
                     if (isDragging) return; // drag happened — ignore
                     const elapsed = performance.now() - localDownTime;
-                    if (elapsed < 280) {
-                        // SHORT click → navigate
-                        clearPreview();
+                    if (elapsed < 400) {
+                        // click → navigate
                         window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
-                    // longer hold → panel already updated, do nothing else
-                }
-
-                function onLeave() {
-                    // Don't clear preview when mouse just leaves the node;
-                    // user might want to read the panel. Panel clears on
-                    // next hold or outside click.
                 }
 
                 nodeEl.addEventListener('mousedown',  onDown);
                 nodeEl.addEventListener('mouseup',    onUp);
-                nodeEl.addEventListener('mouseleave', onLeave);
 
                 nodeEl.addEventListener('touchstart', e => {
                     e.stopPropagation();
@@ -1215,8 +1237,7 @@ async def course_grammar():
                 nodeEl.addEventListener('touchend', () => {
                     if (isDragging) return;
                     const elapsed = performance.now() - localDownTime;
-                    if (elapsed < 280) {
-                        clearPreview();
+                    if (elapsed < 400) {
                         window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
@@ -1770,7 +1791,7 @@ async def course_vocabulary():
                 <!-- populated by JS -->
                 <div class="left-empty" id="leftEmpty">
                     <div class="left-empty-icon">☁️</div>
-                    <div class="left-empty-text">Hold a level node<br>to preview its content</div>
+                    <div class="left-empty-text">Hover over a level node<br>to preview its content</div>
                 </div>
                 <div class="left-inner" id="leftInner" style="display:none">
                     <div class="info-eyebrow" id="infoEyebrow">Chapter</div>
@@ -1919,6 +1940,27 @@ async def course_vocabulary():
             /* ═══════════════════════════════════════════════════════
                LEFT PANEL RENDERING
             ═══════════════════════════════════════════════════════ */
+            function buildFallbackChapter(chapterId) {
+                // Build chapter info from the EXERCISES array when the API has no DB chapter
+                const chExs = EXERCISES.filter(e => e.chapter_id === chapterId);
+                const first = chExs[0] || {};
+                return {
+                    chapter: {
+                        id: chapterId,
+                        title: `Chapter ${first.chapter_index || chapterId}`,
+                        description: '',
+                        level: first.level || 'N5',
+                    },
+                    exercises: chExs.map(e => ({
+                        id: e.id,
+                        title: e.title,
+                        description: e.description || '',
+                        order_index: e.order_index,
+                        chapter_index: e.chapter_index || chapterId,
+                    }))
+                };
+            }
+
             async function showPanel(chapterId, currentExId) {
                 // Show spinner while loading
                 if (!panelCache[chapterId]) {
@@ -1933,8 +1975,8 @@ async def course_vocabulary():
                         if (!res.ok) throw new Error('not found');
                         panelCache[chapterId] = await res.json();
                     } catch {
-                        leftInner.innerHTML = '<div class="left-empty-text" style="opacity:.5;margin-top:40px">Could not load chapter info</div>';
-                        return;
+                        // Fallback: build panel data from loaded EXERCISES array
+                        panelCache[chapterId] = buildFallbackChapter(chapterId);
                     }
                 }
 
@@ -2071,7 +2113,7 @@ async def course_vocabulary():
             }
 
             /* ═══════════════════════════════════════════════════════
-               NODE  EVENTS  (hold = preview panel, click = navigate)
+               NODE  EVENTS  (hover = preview panel, click = navigate)
             ═══════════════════════════════════════════════════════ */
             function clearPreview() {
                 if (previewedNodeEl) {
@@ -2083,6 +2125,7 @@ async def course_vocabulary():
             }
 
             function setPreview(nodeEl, ex) {
+                if (previewedNodeEl === nodeEl) return; // already previewing this node
                 clearPreview();
                 previewedNodeEl = nodeEl;
                 nodeEl.classList.add('previewed');
@@ -2095,34 +2138,29 @@ async def course_vocabulary():
             function attachNodeEvents(nodeEl, ex) {
                 let localDownTime = 0;
 
+                // ── HOVER: update left panel on mouseenter ──
+                nodeEl.addEventListener('mouseenter', () => {
+                    setPreview(nodeEl, ex);
+                });
+
+                // ── CLICK: navigate to the exercise ──
                 function onDown(e) {
                     e.stopPropagation(); // don't start belt-drag from node
                     localDownTime = performance.now();
                     pointerDownTime = localDownTime;
-                    // immediately show preview on hold-start
-                    setPreview(nodeEl, ex);
                 }
 
                 function onUp() {
                     if (isDragging) return; // drag happened — ignore
                     const elapsed = performance.now() - localDownTime;
-                    if (elapsed < 280) {
-                        // SHORT click → navigate
-                        clearPreview();
+                    if (elapsed < 400) {
+                        // click → navigate
                         window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
-                    // longer hold → panel already updated, do nothing else
-                }
-
-                function onLeave() {
-                    // Don't clear preview when mouse just leaves the node;
-                    // user might want to read the panel. Panel clears on
-                    // next hold or outside click.
                 }
 
                 nodeEl.addEventListener('mousedown',  onDown);
                 nodeEl.addEventListener('mouseup',    onUp);
-                nodeEl.addEventListener('mouseleave', onLeave);
 
                 nodeEl.addEventListener('touchstart', e => {
                     e.stopPropagation();
@@ -2133,8 +2171,7 @@ async def course_vocabulary():
                 nodeEl.addEventListener('touchend', () => {
                     if (isDragging) return;
                     const elapsed = performance.now() - localDownTime;
-                    if (elapsed < 280) {
-                        clearPreview();
+                    if (elapsed < 400) {
                         window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
                     }
                 });
@@ -2609,23 +2646,18 @@ async def vocabulary_user_status(request: Request):
     """Return the current user's vocabulary status."""
     email = request.cookies.get("user_email")
     if not email:
-        # Default first vocab exercise is id=3
-        return JSONResponse({"status_chapter": 1, "status_exercise": 3})
+        return JSONResponse({"status_chapter": 1, "status_exercise": 1})
     db = SessionLocal()
     try:
         from features.user.models import User, StatusLearning
-        from features.grammar.models import Chapter, Exercise
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            return JSONResponse({"status_chapter": 1, "status_exercise": 3})
-            
+            return JSONResponse({"status_chapter": 1, "status_exercise": 1})
+
         status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
         if not status:
-            # Fallback if unmigrated
-            first_v_ch = db.query(Chapter).filter(Chapter.category == "vocabulary").order_by(Chapter.order_index).first()
-            first_v_ex = db.query(Exercise).filter(Exercise.chapter_id == first_v_ch.id).order_by(Exercise.order_index).first() if first_v_ch else None
-            return JSONResponse({"status_chapter": first_v_ch.id if first_v_ch else 1, "status_exercise": first_v_ex.id if first_v_ex else 3})
-            
+            return JSONResponse({"status_chapter": 1, "status_exercise": 1})
+
         return JSONResponse({
             "status_chapter":  status.status_chapter_vocabulary,
             "status_exercise": status.status_exercise_vocabulary,
@@ -2645,6 +2677,9 @@ async def vocabulary_chapter(chapter_id: int):
         )
         if not chapter:
             raise HTTPException(status_code=404, detail="Vocabulary chapter not found")
+        # Get proficiency level
+        prof = db.query(Proficiency).filter(Proficiency.id == chapter.proficiency_id).first()
+        level = prof.level if prof else "N5"
         exercises = (
             db.query(Exercise)
             .filter(Exercise.chapter_id == chapter_id)
@@ -2656,7 +2691,7 @@ async def vocabulary_chapter(chapter_id: int):
                 "id":          chapter.id,
                 "title":       chapter.title,
                 "description": chapter.description or "",
-                "level":       chapter.level or "N5",
+                "level":       level,
             },
             "exercises": [
                 {
@@ -2680,8 +2715,9 @@ async def vocabulary_all_exercises():
     db = SessionLocal()
     try:
         exercises = (
-            db.query(Exercise, Chapter)
+            db.query(Exercise, Chapter, Proficiency)
             .join(Chapter, Exercise.chapter_id == Chapter.id)
+            .join(Proficiency, Chapter.proficiency_id == Proficiency.id)
             .filter(Chapter.category == "vocabulary")
             .order_by(Chapter.order_index, Exercise.order_index)
             .all()
@@ -2692,11 +2728,11 @@ async def vocabulary_all_exercises():
                 "chapter_id":  ex.chapter_id,
                 "title":       ex.title,
                 "description": ex.description or "",
-                "level":       ch.level or "N5",
+                "level":       prof.level if prof else "N5",
                 "order_index": ex.order_index,
                 "chapter_index": ch.order_index,
             }
-            for ex, ch in exercises
+            for ex, ch, prof in exercises
         ])
     finally:
         db.close()

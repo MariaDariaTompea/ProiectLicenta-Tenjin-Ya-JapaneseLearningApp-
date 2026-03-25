@@ -25,7 +25,11 @@ dist/
 build/
 
 # Database files (optional - remove if you want to track them)
-# *.db
+*.db
+
 
 # Logs
 *.log
+
+customisableprofile/
+uploads/
