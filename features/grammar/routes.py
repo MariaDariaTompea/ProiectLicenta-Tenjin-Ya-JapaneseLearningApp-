@@ -1104,11 +1104,11 @@ async def course_grammar():
                                 ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
                             </span>`;
                         li.addEventListener('click', () => {
-                            window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
+                            window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || (idx + 1)}`;
                         });
                         li.addEventListener('keydown', e => {
                             if (e.key === 'Enter' || e.key === ' ')
-                                window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
+                                window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || (idx + 1)}`;
                         });
                         ul.appendChild(li);
                     });
@@ -1221,7 +1221,7 @@ async def course_grammar():
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
                         // click → navigate
-                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 }
 
@@ -1238,13 +1238,13 @@ async def course_grammar():
                     if (isDragging) return;
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
-                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
 
                 nodeEl.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                        window.location.href = `/course/grammar/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
             }
@@ -2347,20 +2347,7 @@ async def course_vocabulary():
     """
 
 
-@router.get("/course/grammar/Chapter{chapter_index}/exercise{exercise_index}", response_class=HTMLResponse)
-async def grammar_exercise_page(chapter_index: int, exercise_index: int):
-    """Placeholder for grammar exercises."""
-    return f"""
-    <html>
-    <head><title>Grammar Exercise - Tenjin-Ya</title></head>
-    <body style="background:#0d0608; color:#FCBCD7; font-family:sans-serif; text-align:center; padding-top:100px;">
-        <h1 style="color:#FF9D9D;">Grammar Practice</h1>
-        <p>Chapter {chapter_index}, Exercise {exercise_index}</p>
-        <p>This section is coming soon!</p>
-        <a href="/course/grammar" style="color:#EF87BE; text-decoration:none; border:1px solid #EF87BE; padding:10px 20px; border-radius:30px;">Back to Grammar</a>
-    </body>
-    </html>
-    """
+
 
 @router.get("/course/vocabulary/Chapter{chapter_index}/exercise{exercise_index}", response_class=HTMLResponse)
 async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):

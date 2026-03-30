@@ -37,3 +37,7 @@ app.include_router(router)
 # http://127.0.0.1:8000/docs
 # http://127.0.0.1:8000/hiragana-table
 # http://127.0.0.1:8000/hiragana
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

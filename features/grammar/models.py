@@ -49,6 +49,7 @@ class Exercise(Base):
     chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=False)
     title = Column(String, nullable=False)                       # e.g. "Hiragana & Katakana Course"
     description = Column(Text, default="")
+    theory_content = Column(Text, default="")                    # html/markdown theory shown before test
     exercise_type = Column(String, default="quiz")               # quiz, course, examination, interactive
     order_index = Column(Integer, default=0)                     # display order inside chapter
     points = Column(Integer, default=10)                         # XP / points awarded
