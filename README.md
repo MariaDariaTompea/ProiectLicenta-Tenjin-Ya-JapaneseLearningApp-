@@ -167,4 +167,39 @@ Access the application at `http://127.0.0.1:8000`.
 -   **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
 -   **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
 
+
 *“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
+
+---
+
+## 🌸 APRIL 2026 UPDATE: Roadmap & Goals
+
+This month, the development focus shifts from core architecture to content expansion and interactive AI features.
+
+### **1. Mastering the Kana (Hiragana & Katakana)**
+- **Data Completion**: Completely fill the Hiragana and Katakana master tables. This includes matching every character with its correct stroke-order video, native audio pronunciation, and mnemonic images.
+- **Progress Tracking**: Ensure every character cell in the grid correctly tracks the "hover-to-fill" heart animation for user engagement.
+
+### **2. Kanji Foundation**
+- **Table Structure**: Create the architecture for the Kanji module.
+- **Content Strategy**: Define what each Kanji entry should contain: Onyomi/Kunyomi readings, radical breakdown, and JLPT N5 specific vocabulary usage.
+
+### **3. AI Handwriting Recognition System**
+The most innovative feature for April is the implementation of a real-time handwriting "writing border" and recognition pipeline.
+
+**The Workflow Sketch:**
+```mermaid
+graph TD
+    A[Interactive Canvas] -->|User Draws| B(Stroke Capture)
+    B -->|Convert to| C[Base64 PNG Image]
+    C -->|POST Request| D[FastAPI Backend]
+    D -->|Pre-processing| E[AI Model Inference]
+    E -->|JSON Response| F[Result: 'あ' - 98% Match]
+    F -->|UI Feedback| G[Green Highlight / Next Question]
+```
+
+**Implementation Details:**
+- **Border Logic**: Implement a responsive canvas border that correctly detects stroke boundaries.
+- **Conversion**: Use `canvas.toDataURL()` to transform drawings into data blobs.
+- **AI Integration**: Design the backend to receive these blobs and pass them to either a pre-trained CNN (Convolutional Neural Network) or a lightweight recognition API to validate the user's writing correctly.
+

@@ -2294,7 +2294,7 @@ async def course_vocabulary():
                     if (!EXERCISES || EXERCISES.length === 0) {
                         EXERCISES = [
                             {id:1,chapter_id:1,title:'Learn about writing systems',level:'N5',description:'Hiragana, Katakana, and Kanji tables.', chapter_index: 1, order_index: 1},
-                            {id:2,chapter_id:1,title:'Common Greetings',level:'N5',description:'Basic daily interactions.', chapter_index: 1, order_index: 2},
+                            {id:2,chapter_id:1,title:'Practice Hiragana',level:'N5',description:'Draw and recognize Hiragana characters.', chapter_index: 1, order_index: 2},
                             {id:3,chapter_id:1,title:'Numbers 1-100',level:'N5',description:'Cardinal numbers in Japanese.', chapter_index: 1, order_index: 3},
                             {id:4,chapter_id:2,title:'Family Members',level:'N5',description:'Terms for relatives.', chapter_index: 2, order_index: 1},
                             {id:5,chapter_id:2,title:'Colors & Shapes',level:'N5',description:'Visual descriptors.', chapter_index: 2, order_index: 2},
@@ -2568,6 +2568,183 @@ async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
     </html>
     """
     # Generic placeholder for other exercises
+    is_practice_hiragana = (chapter_index == 1 and exercise_index == 2)
+
+    if is_practice_hiragana:
+        return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Practice Hiragana — Tenjin-Ya</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                height: 100vh;
+                background: #0d0608;
+                color: #FCBCD7;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                overflow: hidden;
+            }
+
+            .bg-img {
+                position: fixed; inset: 0;
+                background: url('/textures/tablepage.png') no-repeat center center / cover;
+                opacity: 0.15; z-index: 0; pointer-events: none;
+            }
+
+            .container {
+                position: relative; z-index: 10;
+                display: flex; flex-direction: column; align-items: center;
+                gap: 32px; width: 100%; max-width: 800px;
+            }
+
+            h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: 42px; color: #FCBCD7;
+            }
+
+            .board-container {
+                background: rgba(252,188,215,0.05);
+                border: 1px solid rgba(252,188,215,0.15);
+                border-radius: 24px;
+                padding: 40px;
+                box-shadow: 0 0 40px rgba(191,80,130,0.15);
+                display: flex; flex-direction: column; align-items: center; gap: 24px;
+            }
+
+            canvas {
+                background: #fff;
+                border-radius: 12px;
+                cursor: crosshair;
+                box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+            }
+
+            .controls {
+                display: flex; gap: 16px; width: 100%;
+            }
+
+            button {
+                flex: 1; padding: 14px; border-radius: 12px;
+                border: 1px solid rgba(252,188,215,0.25);
+                background: rgba(252,188,215,0.06);
+                color: #FCBCD7; font-size: 14px; font-weight: 600;
+                cursor: pointer; transition: all 0.3s ease;
+                text-transform: uppercase; letter-spacing: 1px;
+            }
+            button:hover {
+                background: rgba(252,188,215,0.15);
+                border-color: rgba(252,188,215,0.45);
+                transform: translateY(-2px);
+            }
+            button.primary {
+                background: linear-gradient(135deg, #E56AB3 0%, #BF5082 100%);
+                color: #fff; border: none;
+            }
+            button.primary:hover {
+                box-shadow: 0 0 20px rgba(191,80,130,0.4);
+            }
+
+            .result-panel {
+                margin-top: 20px; font-size: 18px; color: #E56AB3;
+                font-weight: 500; min-height: 27px;
+            }
+
+            .back-link {
+                position: fixed; top: 32px; left: 36px;
+                color: #FCBCD7; text-decoration: none;
+                font-size: 14px; display: flex; align-items: center; gap: 8px;
+                opacity: 0.7; transition: opacity 0.3s ease;
+            }
+            .back-link:hover { opacity: 1; }
+        </style>
+    </head>
+    <body>
+        <div class="bg-img"></div>
+        <a href="/course/vocabulary" class="back-link">← Back to Vocabulary</a>
+
+        <div class="container">
+            <h1>Practice Hiragana</h1>
+            <p style="opacity: 0.6">Draw the character on the canvas below</p>
+            
+            <div class="board-container">
+                <canvas id="paintCanvas" width="400" height="400"></canvas>
+                <div class="controls">
+                    <button onclick="clearCanvas()">Clear Board</button>
+                    <button class="primary" onclick="recognize()">Recognize Drawing</button>
+                </div>
+            </div>
+            
+            <div class="result-panel" id="resultText"></div>
+        </div>
+
+        <script>
+            const canvas = document.getElementById('paintCanvas');
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            // Simple drawing logic
+            canvas.addEventListener('mousedown', (e) => { 
+                drawing = true; 
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            });
+            window.addEventListener('mouseup', () => { drawing = false; });
+            canvas.addEventListener('mousemove', (e) => {
+                if (!drawing) return;
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#2d2d2d';
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            });
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                drawing = true;
+                ctx.beginPath();
+                ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                e.preventDefault();
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                if (!drawing) return;
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#2d2d2d';
+                ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                ctx.stroke();
+                e.preventDefault();
+            }, { passive: false });
+
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                document.getElementById('resultText').innerText = "";
+            }
+
+            async function recognize() {
+                const resText = document.getElementById('resultText');
+                resText.innerText = "Analyzing Strokes...";
+                
+                // For now, this is a placeholder. 
+                // In the future, you'll send the image to your AI endpoint!
+                setTimeout(() => {
+                    resText.innerText = "AI Recognition Placeholder: Looks like 'あ'";
+                }, 1000);
+            }
+        </script>
+    </body>
+    </html>
+    """
+
     return HTMLResponse(f"""
     <!DOCTYPE html><html lang="en"><head>
     <meta charset="UTF-8"><title>Vocabulary Chapter {chapter_index} - Exercise {exercise_index}</title>
