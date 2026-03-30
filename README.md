@@ -1,32 +1,70 @@
 # Tenjin'ya (天神屋) — Innovative Japanese Language Learning
 
-Tenjin'ya is an advanced language learning application initially designed for learning Japanese, with a high potential to be expanded to more languages. Unlike common platforms, Tenjin'ya provides a comprehensive and immersive path to fluency by focusing on the foundational elements of the language—starting with its unique writing systems—and integrating deep cultural context. We bridge the gap between mechanical memorization and true linguistic comprehension.
+Tenjin'ya is an advanced language learning application primarily designed for learning Japanese, with a high potential to be expanded to more languages. Unlike common platforms, Tenjin'ya provides a comprehensive and immersive path to fluency by focusing on the foundational elements of the language—starting with its unique writing systems—and integrating deep cultural context. We bridge the gap between mechanical memorization and true linguistic comprehension.
 
 ---
 
-## 🎨 Concept & Philosophy
+## 🎨 1. Concept & Philosophy (Project Background)
 
-Through testing, analysis of existing apps, and research into platforms such as **Duolingo**, **HelloTalk**, and **Shinobi**, three main limitations were identified that Tenjin'ya improves upon:
+### 1.1 The Context of Language Learning Apps
+The rise of digital learning platforms like **Duolingo**, **HelloTalk**, and **Shinobi** has revolutionized language acquisition. Research (Kukulska-Hulme & Shield, 2008; Deterding et al., 2011) emphasizes that gamification and structured exercises significantly improve user engagement.
 
-### 1. Writing System Mastery (Hiragana, Katakana, Kanji)
-The core reason Japanese was chosen as our starting language is because it contains non-Latin writing systems that require comprehension before grammar or vocabulary. Most popular apps skip this arduous task, jumping directly into words written in Latin transliterations (Romaji) or dialysis without a proper base. 
-**Our Solution:** Tenjin'ya adds a vital piece missing from generic apps. We provide basic courses to visualize and practice the characters of **Hiragana**, **Katakana**, and **Kanji**. We include recognition tests to confirm a learner’s understanding before they move to advanced grammar.
+However, many of these findings are based on studies like the *Duolingo Effectiveness Study* (Vesselinov & Grego, 2012), which primarily focused on Spanish—a language sharing Latin roots and the same alphabet as English. This represents a significant limitation: the effectiveness of these platforms for Asian languages, which feature fundamentally different writing systems, is often much lower due to the high cognitive overhead required at the start of the learning journey.
 
-### 2. Achievement-Based Motivation vs. Toxic Competition
-Many apps create a competitive environment where users eventually focus more on gathering points or "streaks" than actually learning. This often leads to users exploiting the system for rewards, reducing the platform's educational value.
-**Our Solution:** Tenjin'ya introduces a different motivational mechanism based on **individual achievements**. Instead of competing directly against others through rankings or leaderboards, users unlock missions and improve skills in different chapters. We keep competition healthy; users can visualize others' achievements, but the focus remains on personal goals rather than direct comparison.
+### 1.2 The Challenge of Japanese Acquisition
+Japanese presents a unique hurdle because it utilizes three distinct writing systems: **Hiragana**, **Katakana**, and **Kanji**. Beginner learners cannot decode even basic signs or menus without first mastering these characters. Most applications skip this foundational stage, using Romaji (Latin transliteration) or forcing character recognition without structured explanation. Tenjin'ya is built on the belief that visual literacy is the prerequisite for all subsequent grammar and vocabulary learning.
 
-### 3. Cultural Context & Interactive Learning
-Modern language apps often lack a correlation to culture, neglecting the social context of speech. In Japanese, certain expressions must be adapted based on social context, age, or hierarchy.
-**Our Solution:** Tenjin'ya implements an **interactive cultural learning module**. This help learners understand the society in which the language is used, ensuring they communicate appropriately and with nuance.
+### 1.3 Analysis of Existing Platforms: Three Primary Limitations
+Through extensively testing multiple platforms and research into current trends, three primary limitations were identified that Tenjin'ya improves upon:
+
+1.  **Absence of Character Mastery**: Characters are often "dropped" into exercises without radical analysis or stroke-order logic, forcing learners to deduce them via pure repetition.
+2.  **Toxic Competition vs. Learning**: Many apps use competitive leaderboards and "streaks" that eventually prioritize point accumulation over genuine pedagogical progress.
+3.  **Lack of Cultural Context**: Language is inseparable from culture. Essential Japanese concepts like *Keigo* (polite speech) or social hierarchy are often ignored, leading to learners who know words but cannot communicate appropriately in real-world settings.
 
 ---
 
-## 🏗️ Technical Architecture
+## 📊 2. Comparative Analysis
 
-Tenjin'ya aims not only to explore existing app abilities but to bring innovation through a well-crafted aesthetic and modern tech stack.
+The table below summarizes the key differences identified across the applications tested, highlighting the specific dimensions in which existing tools fall short and in which Tenjin'ya proposes a more complete solution.
 
-### **The Backend: FastAPI & Uvicorn**
+| Feature | Duolingo | Shinobi | HelloTalk | **Tenjin'ya** |
+|:---|:---|:---|:---|:---|
+| **Grammar** | Decent coverage, but contains significant gaps | No dedicated grammar exercises | No structured grammar learning | **Dedicated grammar section with structured lessons** |
+| **Vocabulary** | Basic and repetitive | Strong vocabulary enhancement | Minimal support | **Structured and progressive vocabulary system** |
+| **Character Sets** | Very limited (poorly explained) | Minimal focus | Basic introduction | **Full modules for Hiragana, Katakana, and Kanji** |
+| **Culture** | None | Very limited (travel only) | Minimal (mostly VIP) | **Dedicated culture module (Traditions, Keigo, Society)** |
+| **Engagement** | Highly competitive (Distracting) | Almost no system | Social interaction-based | **Achievement-based motivation (Personal growth)** |
+
+---
+
+## 🚀 3. The Tenjin'ya Solution (Vision & Innovations)
+
+Tenjin'ya introduces components absent from generic platforms to create a more authentic perspectives on the language:
+
+### 3.1 Dedicated Character Learning Module
+Users can visualize stroke orders, analyze radicals, and complete recognition exercises. By establishing visual literacy first, learners can read basic word sets early, making it significantly easier to segment sentences and infer vocabulary contextually.
+
+### 3.2 Achievement-Based Motivation
+Instead of rankings, Tenjin'ya uses an **individual achievement system**. Users unlock missions and improve skills in different chapters independently. This keeps engagement healthy and focused on personal linguistic goals rather than direct comparison with others.
+
+### 3.3 Interactive Cultural Learning
+Our culture module is split into two complementary branches:
+-   **Informational Branch**: Geographical/historical landmarks, traditions, and festivals to build an authentic connection with Japanese society.
+-   **Social Integration Branch**: Practical guidance on *Keigo* and social etiquette (gestures, registers of formality), ensuring users communicate appropriately in real-world contexts.
+
+---
+
+## 🎯 4. Project Scope: JLPT N5 Alignment
+
+The primary implementation covers **JLPT N5**, the foundational level of the Japanese Language Proficiency Test. This includes all prerequisite vocabulary, grammar particles, and character knowledge required for a beginner. The application is architected for scalability, with future modules planned for N4 through N1.
+
+---
+
+## 🏗️ 5. Technical Architecture
+
+Tenjin'ya aims to bring innovation through a well-crafted aesthetic and modern tech stack.
+
+### **Backend: FastAPI & Uvicorn**
 The `main.py` file represents the application's entry point, initializing and configuring the **FastAPI** server. 
 - **FastAPI:** A modern, high-performance web framework using Python type hints for automatic validation and interactive API documentation (accessible at `/docs`).
 - **ASGI Standard:** FastAPI is based on the Asynchronous Server Gateway Interface, designed to handle multiple requests simultaneously for high efficiency.
@@ -35,7 +73,7 @@ The `main.py` file represents the application's entry point, initializing and co
 
 ### **Database Strategy: Supabase & PostgreSQL**
 Our core data infrastructure utilizes the **Supabase** platform to host a **PostgreSQL** database. 
-- **PostgreSQL:** An industry-standard Relational Database Management System (RDBMS) supporting SQL, concurrency control, and diverse data types.
+- **Postgres Database:** An industry-standard relational system supporting SQL, concurrency control, and diverse data types.
 - **Cloud Hosting:** The database runs on Supabase's cloud servers rather than locally, offering superior scalability and API integration.
 
 ### **Data Layer: SQLAlchemy ORM**
@@ -50,57 +88,24 @@ To interact with the database efficiently, we use **SQLAlchemy**, a Python Objec
 
 ---
 
-## 📂 Innovation: Grammar vs. Vocabulary Modules
+## 📂 6. Modular Innovation: Vocabulary vs. Grammar
 
 Most apps pick basic words and cycle them to teach grammar. Without auxiliary book support, users lack the choice to learn conversational vocabulary.
 **Tenjin'ya's Solution:** We separated the logic into two distinct modules:
 1. **Grammar Module:** Focuses on particles, verb endings, and sentence structure.
-2. **Vocabulary Module:** Allows users to learn words outside the grammar scope.
-Users can learn specific vocabulary for each chapter and then apply those connections more efficiently within the grammar section. This dual-pathway ensures you have the necessary "tools" (words) before you try to build the "house" (sentences).
+2. **Vocabulary Module:** Allows users to learn words (colors, transport, numbers) outside the grammar scope.
+Users can focus on a specific component they wish to consolidate without being required to follow the entire application flow each time.
 
 ---
 
-## 🚀 Getting Started
+## 🗄️ 7. Database & Exercise System
 
-### **Startup**
-The database schema is initialized automatically via `Base.metadata.create_all(bind=engine)`, creating tables if they do not exist.
-To run the server locally:
-```bash
-.venv\Scripts\python.exe -m uvicorn main:app --port 8000 --reload
-```
-
----
-
-## 📚 References & Research
-
-Our improvements were driven by observations of modern language trends—such as the massive rise in Chinese and Japanese speakers in 2025—and studies on effective acquisition:
-
-- **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.
-- **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
-- **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
-
-*“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
-
----
-
-## 🗄️ Database Restructuring (March 2025)
-
+### **Database Structuring (March 2025)**
 ![Database Schema](docs/database_schema.png)
 
 The database has been restructured for better scalability and separation of concerns.
 
-### What Changed
-
-| Before | After |
-|--------|-------|
-| `users` table held avatar, banner, achievements, and progress | `users` simplified to core account data only |
-| No dedicated profile storage | **New `user_profiles` table** — avatar, banner, equipped achievements |
-| No photo upload tracking | **New `user_photos` table** — uploaded images with type and timestamp |
-| Chapters had a `level` text field and `image_url` | **New `proficiencies` table** (N5→N1) — chapters reference `proficiency_id` |
-| Tests had rigid `option_a/b/c/d` columns | Tests use flexible `options` JSON + `test_type` field |
-
-### New Schema Hierarchy
-
+**New Schema Hierarchy:**
 ```
 Proficiency (N5, N4, N3, N2, N1)
   └── Chapter (grammar / vocabulary / culture)
@@ -108,7 +113,7 @@ Proficiency (N5, N4, N3, N2, N1)
               └── Test (multiple_choice, sentence_builder, matching, text_input, fill_blank, true_false)
 ```
 
-### Tables Overview
+**Tables Overview:**
 
 | Table | Purpose |
 |-------|---------|
@@ -123,25 +128,17 @@ Proficiency (N5, N4, N3, N2, N1)
 | `tests` | Individual questions with flexible JSON options, test_type determines UI |
 | `achievements` | Collectible items with name, description, image |
 
----
+### **Exercise System Architecture**
+The exercise runner supports interactive question types for grammar exercises. Each `Test` row has a `test_type` that tells the frontend which renderer to use, and an `options` JSON column with type-specific data.
 
-## 🎮 Exercise System Architecture (Planned)
+**Supported Test Types:**
+-   `multiple_choice`: Standard pick-one selection.
+-   `sentence_builder`: Drag-and-drop word blocks for syntax practice.
+-   `matching`: Pair-based recognition (Japanese ↔ English).
+-   `text_input`: Free typing (integrated with **Wanakana** for kana input).
+-   `fill_blank` & `true_false`: Foundational logic checks.
 
-The exercise runner will support Duolingo-style interactive question types for grammar exercises.
-
-### Supported Test Types
-
-| Type | Description |
-|------|-------------|
-| `multiple_choice` | Pick the correct answer from 4 options |
-| `sentence_builder` | Arrange word blocks into the correct sentence |
-| `matching` | Match pairs (Japanese ↔ English) |
-| `text_input` | Type the answer freely |
-| `fill_blank` | Complete a sentence with the missing word |
-| `true_false` | True or false statement |
-
-### Implementation Structure
-
+**Implementation File Structure:**
 ```
 features/exercises/
 ├── routes.py              — /exercise/{id} unified endpoint
@@ -150,4 +147,24 @@ features/exercises/
     └── exercise_runner.py — lesson page with progress bar and results
 ```
 
-Each `Test` row in the database has a `test_type` that tells the frontend which renderer to use, and an `options` JSON column with type-specific data. Adding a new exercise type only requires adding a new render function and registering it.
+---
+
+## 🎮 8. Getting Started
+
+### **Startup**
+The database schema is initialized automatically via `Base.metadata.create_all(bind=engine)`, creating tables if they do not exist.
+To run the server locally:
+```bash
+python main.py
+```
+Access the application at `http://127.0.0.1:8000`.
+
+---
+
+## 📚 9. References & Research
+
+-   **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.
+-   **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
+-   **Vesselinov, R., & Grego, J. (2012).** *Duolingo Effectiveness Study.*
+
+*“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
