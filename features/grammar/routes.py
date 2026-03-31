@@ -2927,6 +2927,7 @@ async def culture_chapters_api():
                 "description": ch.description or "",
                 "order_index": ch.order_index,
                 "image_url":   ch.image_url,
+                "pdf_url":     ch.pdf_url,
             }
             for ch in chapters
         ])
@@ -3235,6 +3236,85 @@ async def course_culture():
             }
             @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
+            /* ── Reading Overlay ── */
+            .reading-overlay {
+                position: fixed; inset: 0;
+                background: #0d0608;
+                z-index: 2000;
+                display: flex; flex-direction: column;
+                opacity: 0; pointer-events: none;
+                transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+                transform: translateY(20px);
+            }
+            .reading-overlay.active { 
+                opacity: 1; pointer-events: all;
+                transform: translateY(0);
+            }
+            .reading-header {
+                height: 100px; padding: 0 60px;
+                display: flex; align-items: center; justify-content: space-between;
+                border-bottom: 1px solid rgba(252, 188, 215, 0.08);
+                background: #0d0608;
+            }
+            .reading-title-wrap {
+                display: flex; flex-direction: column;
+            }
+            .reading-eyebrow {
+                font-size: 10px; color: #E56AB3;
+                text-transform: uppercase; letter-spacing: 3px;
+                margin-bottom: 4px;
+            }
+            .reading-header h2 { font-family: 'Playfair Display', serif; font-size: 24px; color: #FCBCD7; }
+            .close-reading {
+                background: rgba(252, 188, 215, 0.05); border: 1px solid rgba(252, 188, 215, 0.1); 
+                color: rgba(252, 188, 215, 0.6); padding: 10px 20px; border-radius: 30px;
+                cursor: pointer; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
+                transition: all 0.3s;
+                display: flex; align-items: center; gap: 8px;
+            }
+            .close-reading:hover { 
+                color: #FCBCD7; background: rgba(252, 188, 215, 0.1); 
+                border-color: rgba(252, 188, 215, 0.3);
+            }
+            .pdf-container { 
+                flex: 1; background: #1a1a1d; position: relative; 
+                margin: 20px 40px; border-radius: 12px; overflow: hidden;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            }
+            #pdfFrame { width: 100%; height: 100%; border: none; }
+            
+            .pdf-loading {
+                position: absolute; inset: 0;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                background: #1a1a1d; z-index: 10; gap: 20px;
+            }
+            .spinner {
+                width: 40px; height: 40px;
+                border: 3px solid rgba(229, 106, 179, 0.1);
+                border-top-color: #E56AB3;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .pdf-loading p { color: rgba(252, 188, 215, 0.4); font-size: 14px; letter-spacing: 1px; }
+
+            .reading-footer {
+                height: 100px; display: flex; align-items: center; justify-content: center;
+                border-top: 1px solid rgba(252, 188, 215, 0.08); background: #0d0608;
+            }
+            .complete-reading-btn {
+                background: linear-gradient(90deg, #E56AB3, #BF5082);
+                color: #0d0608; border: none;
+                padding: 16px 40px; border-radius: 40px; font-weight: 700;
+                cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+                font-family: 'Inter', sans-serif;
+                letter-spacing: 1px; text-transform: uppercase; font-size: 13px;
+            }
+            .complete-reading-btn:hover { 
+                transform: scale(1.05) translateY(-5px); 
+                box-shadow: 0 10px 30px rgba(229, 106, 179, 0.4); 
+            }
+
         </style>
     </head>
     <body onload="init()">
@@ -3261,9 +3341,36 @@ async def course_culture():
             <img id="repImage" src="" alt="Cultural Illustration">
         </div>
 
+        <!-- Reading Overlay -->
+        <div class="reading-overlay" id="readingOverlay">
+            <div class="reading-header">
+                <div class="reading-title-wrap">
+                    <span class="reading-eyebrow">Scroll of Knowledge</span>
+                    <h2 id="readingTitle">Title</h2>
+                </div>
+                <button class="close-reading" onclick="closeReading()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Close
+                </button>
+            </div>
+            <div class="pdf-container">
+                <div id="pdfLoading" class="pdf-loading">
+                    <div class="spinner"></div>
+                    <p>Unrolling the scroll...</p>
+                </div>
+                <iframe id="pdfFrame" src="" onload="document.getElementById('pdfLoading').style.display='none'"></iframe>
+            </div>
+            <div class="reading-footer">
+                <button class="complete-reading-btn" id="completeBtn" onclick="onCompleteClick()">
+                    I have absorbed this knowledge
+                </button>
+            </div>
+        </div>
+
         <script>
             let chapters = [];
             let userStatus = 1;
+            let currentOpenChapterId = null;
 
             async function init() {
                 await fetchStatus();
@@ -3324,10 +3431,10 @@ async def course_culture():
                     card.addEventListener('mouseleave', endPress);
                     card.addEventListener('touchend', endPress);
 
-                    // Click to mark as complete (Reading Action)
-                    card.addEventListener('click', async () => {
+                    // Click to open reading view
+                    card.addEventListener('click', () => {
                         if (!isLocked) {
-                            await markAsComplete(ch.id);
+                            openReading(ch);
                         }
                     });
 
@@ -3335,6 +3442,35 @@ async def course_culture():
                     row.appendChild(card);
                     listEl.appendChild(row);
                 });
+            }
+
+            function openReading(ch) {
+                currentOpenChapterId = ch.id;
+                document.getElementById('readingTitle').innerText = ch.title;
+                const pdfFrame = document.getElementById('pdfFrame');
+                const pdfLoading = document.getElementById('pdfLoading');
+                
+                // Show loading screen
+                pdfLoading.style.display = 'flex';
+                
+                // Construct the path
+                const url = ch.pdf_url.startsWith('http') ? ch.pdf_url : `/uploads/${ch.pdf_url}`;
+                pdfFrame.src = url;
+                
+                document.getElementById('readingOverlay').classList.add('active');
+            }
+
+            function closeReading() {
+                document.getElementById('readingOverlay').classList.remove('active');
+                document.getElementById('pdfFrame').src = '';
+                currentOpenChapterId = null;
+            }
+
+            async function onCompleteClick() {
+                if (currentOpenChapterId) {
+                    await markAsComplete(currentOpenChapterId);
+                    closeReading();
+                }
             }
 
             function showImage(url) {
@@ -3354,7 +3490,6 @@ async def course_culture():
                 try {
                     const res = await fetch(`/api/culture/complete/${id}`, { method: 'POST' });
                     if (res.ok) {
-                        // Smoothly update local state and re-render
                         await fetchStatus();
                         render();
                     }

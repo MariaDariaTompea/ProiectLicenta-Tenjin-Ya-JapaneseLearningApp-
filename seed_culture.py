@@ -19,21 +19,24 @@ def seed_culture():
                 "description": "Learn about the ancient art of Chanoyu, the Japanese way of tea.",
                 "category": "culture",
                 "order_index": 1,
-                "image_url": "/uploads/culture/tea_ceremony.png"
+                "image_url": "/uploads/culture/tea_ceremony.png",
+                "pdf_url": "culturedocs/read1.pdf"
             },
             {
                 "title": "History of the Samurai",
                 "description": "Explore the code of Bushido and the life of Japan's legendary warriors.",
                 "category": "culture",
                 "order_index": 2,
-                "image_url": "/uploads/culture/samurai_history.png"
+                "image_url": "/uploads/culture/samurai_history.png",
+                "pdf_url": "culturedocs/samurai_history.pdf"
             },
             {
                 "title": "Kimono & Traditional Dress",
                 "description": "Discover the intricate beauty of Japan's traditional garments.",
                 "category": "culture",
                 "order_index": 3,
-                "image_url": "/uploads/culture/kimono_tradition.png"
+                "image_url": "/uploads/culture/kimono_tradition.png",
+                "pdf_url": "culturedocs/kimono_tradition.pdf"
             }
         ]
         
@@ -46,13 +49,14 @@ def seed_culture():
                     description=ch_data["description"],
                     category=ch_data["category"],
                     order_index=ch_data["order_index"],
-                    image_url=ch_data["image_url"]
+                    image_url=ch_data["image_url"],
+                    pdf_url=ch_data.get("pdf_url", "")
                 )
                 db.add(ch)
                 db.commit()
                 db.refresh(ch)
                 
-                # Add a dummy exercise so it's "comprintable"
+                # Add a dummy exercise so it's "completable"
                 ex = Exercise(
                     chapter_id=ch.id,
                     title=ch.title + " Reading",
@@ -64,10 +68,11 @@ def seed_culture():
                 db.commit()
                 print(f"Added Culture Chapter: {ch.title}")
             else:
-                # Update image_url if exists
+                # Update image_url and pdf_url if exists
                 existing.image_url = ch_data["image_url"]
+                existing.pdf_url = ch_data.get("pdf_url", "")
                 db.commit()
-                print(f"Updated Culture Chapter image: {ch_data['title']}")
+                print(f"Updated Culture Chapter: {ch_data['title']}")
                 
     finally:
         db.close()
