@@ -31,5 +31,9 @@ build/
 # Logs
 *.log
 
+# Private/Temporary uploads
 customisableprofile/
-uploads/
+uploads/*
+# BUT track educational content folders:
+!uploads/culture/
+!uploads/culturedocs/
