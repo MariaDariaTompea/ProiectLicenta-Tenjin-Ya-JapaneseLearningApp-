@@ -98,7 +98,7 @@ Users can focus on a specific component they wish to consolidate without being r
 
 ---
 
-### 🌸 ![User Experience: Flow & Selection](docs/pink_ux_heading.png)
+
 
 Tenjin-ya prioritises a premium, aesthetic experience from the moment the user enters the application:
 
