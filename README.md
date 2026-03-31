@@ -98,6 +98,22 @@ Users can focus on a specific component they wish to consolidate without being r
 
 ---
 
+### 🌸 $\color{#e56ab3}{\text{User Experience: Flow & Selection}}$
+
+Tenjin-ya prioritises a premium, aesthetic experience from the moment the user enters the application:
+
+1.  **Authentication & Entry**: Users are first met with a sleek login interface. This stage ensures that each student's progress in characters, grammar, and vocabulary is individually tracked and securely stored.
+2.  **The Welcome Selection**: Once logged in, the user is transitioned into the immersive "Selection Screen." This is governed by a dynamic **Pink Ribbon Menu** (animated with custom CSS for a premium feel).
+3.  **Picking a Path**: From the main menu, users can pick their current focus:
+    *   **Grammar**: Master syntax and particles (JLPT N5 focus).
+    *   **Vocabulary**: Explore cardinal numbers, colors, and travel-specific terms.
+    *   **Culture**: Enter the "Scroll of Knowledge" to read PDFs about Japanese traditions like the Tea Ceremony or Samurai history.
+    *   **Profile**: Customise avatars, view achievements, and check overall learning status.
+
+![Login & Selection Interface](docs/GitHubPage1.jpg)
+
+---
+
 ## 🗄️ 7. Database & Exercise System
 
 ### **Database Structuring (March 2025)**
