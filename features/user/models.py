@@ -70,6 +70,9 @@ class StatusLearning(Base):
     status_chapter_vocabulary = Column(Integer, default=1, nullable=False, server_default="1")
     status_exercise_vocabulary = Column(Integer, default=1, nullable=False, server_default="1")
 
+    status_chapter_culture = Column(Integer, default=1, nullable=False, server_default="1")
+    status_exercise_culture = Column(Integer, default=1, nullable=False, server_default="1")
+
     user = relationship("User", back_populates="status")
 
 

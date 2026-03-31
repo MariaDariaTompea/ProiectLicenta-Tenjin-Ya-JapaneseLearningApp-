@@ -36,6 +36,7 @@ class Chapter(Base):
     description = Column(Text, default="")                       # short description
     category = Column(String, default="general")                 # grammar, vocabulary, culture
     order_index = Column(Integer, default=0)                     # display order
+    image_url = Column(String, default="")                       # representative image
 
     proficiency = relationship("Proficiency", back_populates="chapters")
     exercises = relationship("Exercise", back_populates="chapter", order_by="Exercise.order_index")

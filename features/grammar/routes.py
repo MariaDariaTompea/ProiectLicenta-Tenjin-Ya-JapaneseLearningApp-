@@ -2759,25 +2759,6 @@ async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
     """)
 
 
-@router.get("/course/culture", response_class=HTMLResponse)
-async def course_culture():
-    return """
-    <html>
-    <head>
-        <title>Culture</title>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-        <style>
-            body { font-family: 'Playfair Display', serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #111; color: #FCBCD7; opacity: 0; transition: opacity 1s ease; }
-            body.loaded { opacity: 1; }
-            h1 { font-size: 48px; }
-        </style>
-    </head>
-    <body>
-        <h1>Culture</h1>
-        <script>window.addEventListener('load', () => document.body.classList.add('loaded'));</script>
-    </body>
-    </html>
-    """
 
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -2900,3 +2881,487 @@ async def vocabulary_all_exercises():
         ])
     finally:
         db.close()
+
+
+# ─────────────────────────────────────────────────────────
+#  CULTURE API ENDPOINTS
+# ─────────────────────────────────────────────────────────
+
+@router.get("/api/culture/user-status")
+async def culture_user_status(request: Request):
+    """Return the current user's culture status."""
+    email = request.cookies.get("user_email")
+    if not email:
+        return JSONResponse({"status_chapter": 1})
+    db = SessionLocal()
+    try:
+        from features.user.models import User, StatusLearning
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return JSONResponse({"status_chapter": 1})
+
+        status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
+        if not status:
+            return JSONResponse({"status_chapter": 1})
+
+        return JSONResponse({"status_chapter":  status.status_chapter_culture or 1})
+    finally:
+        db.close()
+
+
+@router.get("/api/culture/chapters")
+async def culture_chapters_api():
+    """Return all culture chapters."""
+    db = SessionLocal()
+    try:
+        chapters = (
+            db.query(Chapter)
+            .filter(Chapter.category == "culture")
+            .order_by(Chapter.order_index)
+            .all()
+        )
+        return JSONResponse([
+            {
+                "id":          ch.id,
+                "title":       ch.title,
+                "description": ch.description or "",
+                "order_index": ch.order_index,
+                "image_url":   ch.image_url,
+            }
+            for ch in chapters
+        ])
+    finally:
+        db.close()
+
+
+@router.post("/api/culture/complete/{chapter_id}")
+async def culture_complete_chapter(chapter_id: int, request: Request):
+    """Mark a culture chapter as completed and unlock the next one."""
+    email = request.cookies.get("user_email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    
+    db = SessionLocal()
+    try:
+        from features.user.models import User, StatusLearning
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        status = db.query(StatusLearning).filter(StatusLearning.user_id == user.id).first()
+        if not status:
+            raise HTTPException(status_code=404, detail="Status not found")
+        
+        chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+        if not chapter:
+            raise HTTPException(status_code=404, detail="Chapter not found")
+        
+        # If user just completed the current chapter, increment the status
+        if status.status_chapter_culture <= chapter.order_index:
+            status.status_chapter_culture = chapter.order_index + 1
+            db.commit()
+            
+        return JSONResponse({"success": True, "new_status": status.status_chapter_culture})
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────────────────
+#  CULTURE PAGE
+# ─────────────────────────────────────────────────────────
+
+@router.get("/course/culture", response_class=HTMLResponse)
+async def course_culture():
+    return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Japanese Culture — Tenjin-Ya</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            /* ── Reset & Foundations ── */
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: #0a0a0b;
+                color: #FCBCD7;
+                height: 100vh;
+                overflow: hidden;
+                display: flex;
+            }
+
+            /* ── Layout ── */
+            .main-area {
+                width: 70%;
+                height: 100%;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                padding: 60px 80px;
+                border-right: 1px solid rgba(252, 188, 215, 0.08);
+                overflow: hidden;
+                background: linear-gradient(135deg, #0a0a0b 0%, #1a0f14 100%);
+            }
+            .image-panel {
+                width: 30%;
+                height: 100%;
+                background: #050505;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            /* Background decoration */
+            .main-area::before {
+                content: "";
+                position: absolute;
+                top: -100px; right: -100px;
+                width: 400px; height: 400px;
+                background: radial-gradient(circle, rgba(229, 106, 179, 0.05) 0%, transparent 70%);
+                z-index: 0;
+            }
+
+            /* ── Header ── */
+            .header {
+                margin-bottom: 50px;
+                position: relative;
+                z-index: 10;
+            }
+            .header h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: 48px;
+                letter-spacing: -1px;
+                color: #FCBCD7;
+                margin-bottom: 8px;
+            }
+            .header p {
+                font-size: 14px;
+                color: rgba(252, 188, 215, 0.5);
+                text-transform: uppercase;
+                letter-spacing: 3px;
+            }
+
+            /* ── Scrollable List ── */
+            .chapter-list {
+                flex: 1;
+                overflow-y: auto;
+                padding-right: 20px;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(229, 106, 179, 0.3) transparent;
+                position: relative;
+            }
+            .chapter-list::-webkit-scrollbar { width: 4px; }
+            .chapter-list::-webkit-scrollbar-thumb { background: rgba(229, 106, 179, 0.3); border-radius: 10px; }
+
+            /* Vertical Axis Line */
+            .chapter-list::before {
+                content: "";
+                position: absolute;
+                top: 40px; left: 30px;
+                width: 1px; height: calc(100% - 80px);
+                background: linear-gradient(to bottom, 
+                    transparent 0%, 
+                    rgba(229, 106, 179, 0.3) 10%, 
+                    rgba(229, 106, 179, 0.3) 90%, 
+                    transparent 100%);
+                z-index: 1;
+                pointer-events: none;
+            }
+
+            .chapter-row {
+                display: flex;
+                align-items: center;
+                margin-bottom: 24px;
+                position: relative;
+                z-index: 2;
+            }
+
+            /* Dot Styles */
+            .dot-area {
+                width: 60px;
+                flex-shrink: 0;
+                display: flex;
+                justify-content: center;
+                z-index: 10;
+            }
+            .dot {
+                width: 12px; height: 12px;
+                border-radius: 50%;
+                background: #1a1a1d;
+                border: 2px solid rgba(229, 106, 179, 0.4);
+                transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 0 0 rgba(229, 106, 179, 0);
+            }
+            .dot.completed {
+                background: #E56AB3;
+                border-color: #E56AB3;
+                box-shadow: 0 0 15px rgba(229, 106, 179, 0.6);
+            }
+            .dot.active {
+                background: #FCBCD7;
+                border-color: #FCBCD7;
+                transform: scale(1.4);
+                box-shadow: 0 0 20px rgba(252, 188, 215, 0.4);
+            }
+
+            /* Card Styles */
+            .chapter-card {
+                flex: 1;
+                background: rgba(252, 188, 215, 0.03);
+                border: 1px solid rgba(252, 188, 215, 0.08);
+                border-radius: 16px;
+                padding: 24px 32px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                user-select: none;
+                backdrop-filter: blur(4px);
+            }
+            .chapter-card:hover {
+                background: rgba(252, 188, 215, 0.06);
+                border-color: rgba(252, 188, 215, 0.2);
+                transform: translateX(8px);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            }
+            .chapter-card.locked {
+                opacity: 0.3;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+            .chapter-card h3 {
+                font-family: 'Playfair Display', serif;
+                font-size: 22px;
+                margin-bottom: 6px;
+                color: #FCBCD7;
+                transition: color 0.3s;
+            }
+            .chapter-card p {
+                font-size: 13px;
+                color: rgba(252, 188, 215, 0.5);
+                font-weight: 300;
+                line-height: 1.5;
+            }
+            .chapter-card.completed h3 {
+                color: #E56AB3;
+            }
+
+            /* Badge */
+            .status-badge {
+                position: absolute;
+                top: 24px; right: 32px;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                color: #E56AB3;
+                background: rgba(229, 106, 179, 0.1);
+                padding: 4px 10px;
+                border-radius: 20px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                font-weight: 600;
+            }
+            .chapter-card.completed .status-badge {
+                opacity: 1;
+            }
+
+            /* ── Image Panel ── */
+            #repImage {
+                width: 100%; height: 100%;
+                object-fit: cover;
+                opacity: 0;
+                transition: opacity 1.2s ease, transform 2s cubic-bezier(0.16, 1, 0.3, 1);
+                transform: scale(1.15);
+            }
+            #repImage.visible {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+            .panel-overlay {
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(circle at center, transparent 0%, #050505 90%);
+                z-index: 2;
+                pointer-events: none;
+            }
+            .image-placeholder {
+                position: absolute;
+                z-index: 3;
+                color: rgba(252, 188, 215, 0.2);
+                font-family: 'Playfair Display', serif;
+                font-size: 20px;
+                text-align: center;
+                letter-spacing: 2px;
+                max-width: 200px;
+            }
+
+            /* ── Controls ── */
+            .back-btn {
+                position: absolute;
+                top: 40px; right: 40px;
+                width: 54px; height: 54px;
+                border-radius: 50%;
+                background: rgba(252, 188, 215, 0.05);
+                border: 1px solid rgba(252, 188, 215, 0.15);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                z-index: 100;
+                color: #FCBCD7;
+                text-decoration: none;
+            }
+            .back-btn:hover {
+                background: rgba(252, 188, 215, 0.1);
+                border-color: rgba(252, 188, 215, 0.4);
+                transform: scale(1.1) rotate(-8deg);
+                box-shadow: 0 0 20px rgba(229, 106, 179, 0.2);
+            }
+            
+            .hint-toast {
+                position: fixed;
+                bottom: 30px; left: calc(35% - 100px);
+                background: rgba(10, 10, 11, 0.8);
+                backdrop-filter: blur(8px);
+                color: rgba(252, 188, 215, 0.6);
+                padding: 12px 24px;
+                border-radius: 30px;
+                font-size: 12px;
+                border: 1px solid rgba(252, 188, 215, 0.1);
+                z-index: 1000;
+                pointer-events: none;
+                animation: fadeIn 1s ease-out;
+            }
+            @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+        </style>
+    </head>
+    <body onload="init()">
+        <a href="/welcome#selection" class="back-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+
+        <div class="main-area">
+            <div class="header">
+                <h1>Cultural Readings</h1>
+                <p>Wisdom and traditions from the Land of the Rising Sun</p>
+            </div>
+
+            <div class="chapter-list" id="chapterList">
+                <!-- Content generated by JS -->
+            </div>
+            
+            <div class="hint-toast">Hold on a scroll of knowledge to reveal its essence</div>
+        </div>
+
+        <div class="image-panel">
+            <div class="panel-overlay"></div>
+            <div class="image-placeholder" id="placeholder">The essence is yet to be revealed</div>
+            <img id="repImage" src="" alt="Cultural Illustration">
+        </div>
+
+        <script>
+            let chapters = [];
+            let userStatus = 1;
+
+            async function init() {
+                await fetchStatus();
+                await fetchChapters();
+                render();
+            }
+
+            async function fetchStatus() {
+                try {
+                    const res = await fetch('/api/culture/user-status');
+                    const data = await res.json();
+                    userStatus = data.status_chapter || 1;
+                } catch (err) { console.error("Error fetching status:", err); }
+            }
+
+            async function fetchChapters() {
+                try {
+                    const res = await fetch('/api/culture/chapters');
+                    chapters = await res.json();
+                } catch (err) { console.error("Error fetching chapters:", err); }
+            }
+
+            function render() {
+                const listEl = document.getElementById('chapterList');
+                listEl.innerHTML = '';
+
+                chapters.forEach((ch) => {
+                    const isLocked = ch.order_index > userStatus;
+                    const isCompleted = ch.order_index < userStatus;
+                    const isActive = ch.order_index === userStatus;
+
+                    const row = document.createElement('div');
+                    row.className = 'chapter-row';
+
+                    const dotArea = document.createElement('div');
+                    dotArea.className = 'dot-area';
+                    dotArea.innerHTML = `<div class="dot ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}"></div>`;
+
+                    const card = document.createElement('div');
+                    card.className = `chapter-card ${isLocked ? 'locked' : ''} ${isCompleted ? 'completed' : ''}`;
+                    card.innerHTML = `
+                        <div class="status-badge">Unlocked</div>
+                        <h3>${ch.title}</h3>
+                        <p>${ch.description}</p>
+                    `;
+
+                    // Interaction Logic: Long Press (Hold)
+                    let pressTimer;
+                    const startPress = () => {
+                        if (isLocked) return;
+                        pressTimer = setTimeout(() => showImage(ch.image_url), 400);
+                    };
+                    const endPress = () => clearTimeout(pressTimer);
+
+                    card.addEventListener('mousedown', startPress);
+                    card.addEventListener('touchstart', startPress);
+                    card.addEventListener('mouseup', endPress);
+                    card.addEventListener('mouseleave', endPress);
+                    card.addEventListener('touchend', endPress);
+
+                    // Click to mark as complete (Reading Action)
+                    card.addEventListener('click', async () => {
+                        if (!isLocked) {
+                            await markAsComplete(ch.id);
+                        }
+                    });
+
+                    row.appendChild(dotArea);
+                    row.appendChild(card);
+                    listEl.appendChild(row);
+                });
+            }
+
+            function showImage(url) {
+                const img = document.getElementById('repImage');
+                const placeholder = document.getElementById('placeholder');
+                
+                if (placeholder) placeholder.style.opacity = '0';
+                img.classList.remove('visible');
+                
+                setTimeout(() => {
+                    img.src = url;
+                    img.onload = () => img.classList.add('visible');
+                }, 100);
+            }
+
+            async function markAsComplete(id) {
+                try {
+                    const res = await fetch(`/api/culture/complete/${id}`, { method: 'POST' });
+                    if (res.ok) {
+                        // Smoothly update local state and re-render
+                        await fetchStatus();
+                        render();
+                    }
+                } catch (err) { console.error("Error completing chapter:", err); }
+            }
+        </script>
+    </body>
+    </html>
+    """
+
