@@ -80,7 +80,7 @@ async def kanji_table():
         </style>
     </head>
     <body>
-        <a href="/course/vocabulary/Chapter1/exercise1" class="back-btn">&#8592; Back</a>
+        <a href="/writing-tables" class="back-btn">&#8592; Back</a>
         <h1>Kanji Characters</h1>
         <p>Coming soon...</p>
     </body>

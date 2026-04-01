@@ -186,7 +186,7 @@ async def welcome():
                 z-index: 99;
                 display: flex;
                 align-items: center;
-                justify-content: flex-end;
+                justify-content: space-between;
                 opacity: 0;
                 pointer-events: none;
                 transition: opacity 0.8s ease 0.3s;
@@ -203,6 +203,10 @@ async def welcome():
                 align-items: flex-end;
                 margin-right: 0;
             }
+            .ribbon-container.is-left {
+                align-items: flex-start;
+                margin-left: 0;
+            }
 
             .ribbon-item {
                 position: relative;
@@ -212,11 +216,20 @@ async def welcome():
                 transform: translateX(100%);
                 transition: transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             }
+            .ribbon-item.is-left {
+                transform: translateX(-100%);
+            }
             .ribbon-item.slide-in {
                 transform: translateX(30px);
             }
+            .ribbon-item.is-left.slide-in {
+                transform: translateX(-30px);
+            }
             .ribbon-item:hover {
                 transform: translateX(10px) !important;
+            }
+            .ribbon-item.is-left:hover {
+                transform: translateX(-10px) !important;
             }
 
             .ribbon-item img {
@@ -224,6 +237,9 @@ async def welcome():
                 height: 100%;
                 object-fit: contain;
                 object-position: right;
+            }
+            .ribbon-item.is-left img {
+                object-position: left;
             }
 
             .ribbon-text {
@@ -240,20 +256,52 @@ async def welcome():
                 white-space: nowrap;
             }
 
+            .ribbon-tooltip {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) translateY(20px);
+                background: rgba(13, 6, 8, 0.95);
+                border: 1px solid rgba(229, 106, 179, 0.4);
+                color: #FCBCD7;
+                font-family: 'Playfair Display', serif;
+                font-size: 14px;
+                letter-spacing: 1px;
+                padding: 10px 18px;
+                border-radius: 12px;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease 0s, transform 0.3s ease 0s;
+                box-shadow: 0 8px 32px rgba(191, 80, 130, 0.25);
+                z-index: 10;
+            }
+
+            .ribbon-item:hover .ribbon-tooltip {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(0);
+                transition: opacity 0.4s ease 2s, transform 0.4s ease 2s;
+            }
+
             .ribbon-item:nth-child(1) { transition-delay: 0.3s; }
             .ribbon-item:nth-child(2) { transition-delay: 0.5s; }
             .ribbon-item:nth-child(3) { transition-delay: 0.7s; }
             .ribbon-item:nth-child(4) { transition-delay: 0.9s; }
+            .ribbon-container.is-left .ribbon-item:nth-child(1) { transition-delay: 1.1s; }
 
             .ribbon-container.fade-out .ribbon-item {
                 opacity: 0;
                 transform: translateX(100%) !important;
                 transition: opacity 0.6s ease, transform 0.8s ease;
             }
+            .ribbon-container.fade-out .ribbon-item.is-left {
+                transform: translateX(-100%) !important;
+            }
             .ribbon-container.fade-out .ribbon-item:nth-child(1) { transition-delay: 0s; }
             .ribbon-container.fade-out .ribbon-item:nth-child(2) { transition-delay: 0.1s; }
             .ribbon-container.fade-out .ribbon-item:nth-child(3) { transition-delay: 0.2s; }
             .ribbon-container.fade-out .ribbon-item:nth-child(4) { transition-delay: 0.3s; }
+            .ribbon-container.is-left.fade-out .ribbon-item:nth-child(1) { transition-delay: 0.4s; }
 
             .fox-video-overlay {
                 position: fixed;
@@ -273,6 +321,7 @@ async def welcome():
                 height: 100%;
                 object-fit: cover;
             }
+
         </style>
     </head>
     <body>
@@ -282,6 +331,16 @@ async def welcome():
         <div class="black-overlay" id="blackOverlay"></div>
 
         <div class="course-menu" id="courseMenu">
+            <div class="ribbon-container is-left" id="leftRibbonContainer">
+                <div class="ribbon-item is-left" data-href="/writing-tables">
+                    <img src="/textures/ribbontables.png" alt="ribbon">
+                    <div class="ribbon-tooltip">Table Contents</div>
+                </div>
+                <div class="ribbon-item is-left" data-href="/writing-practice">
+                    <img src="/textures/ribbonwritting.png" alt="ribbon">
+                    <div class="ribbon-tooltip">Writing Practice</div>
+                </div>
+            </div>
             <div class="ribbon-container" id="ribbonContainer">
                 <div class="ribbon-item" data-href="/course/grammar">
                     <img src="/textures/ribbon1.png" alt="ribbon">
@@ -350,10 +409,12 @@ async def welcome():
                 item.addEventListener('click', function() {
                     const targetUrl = this.getAttribute('data-href');
                     const ribbonContainer = document.getElementById('ribbonContainer');
+                    const leftRibbonContainer = document.getElementById('leftRibbonContainer');
                     const foxOverlay = document.getElementById('foxVideo');
                     const foxVid = document.getElementById('foxVid');
                     const overlay = document.getElementById('blackOverlay');
                     ribbonContainer.classList.add('fade-out');
+                    if (leftRibbonContainer) leftRibbonContainer.classList.add('fade-out');
                     setTimeout(() => {
                         foxVid.currentTime = 0;
                         foxVid.play();
@@ -373,8 +434,523 @@ async def welcome():
 
 
 # ─────────────────────────────────────────────────────────
+#  WRITING TABLES — standalone picker
+# ─────────────────────────────────────────────────────────
+
+@router.get("/writing-tables", response_class=HTMLResponse)
+async def writing_tables():
+    """Standalone writing-system picker — reached from the welcome page 'あ' button."""
+    return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Writing Systems — Tenjin-Ya</title>
+        <meta name="description" content="Choose a writing system to learn: Hiragana, Katakana, or Kanji.">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+            body {
+                font-family: 'Inter', sans-serif;
+                height: 100vh;
+                overflow: hidden;
+                background: #0d0608;
+                color: #FCBCD7;
+                opacity: 0;
+                transition: opacity 0.9s ease;
+                user-select: none;
+            }
+            body.loaded { opacity: 1; }
+
+            /* Background */
+            .bg-img {
+                position: fixed; inset: 0;
+                background: url('/textures/island1 (1).png') no-repeat center center / cover;
+                opacity: 0.22; z-index: 0; pointer-events: none;
+            }
+            .vignette {
+                position: fixed; inset: 0;
+                background: radial-gradient(ellipse at center, transparent 20%, #0d0608 88%);
+                z-index: 1; pointer-events: none;
+            }
+
+            /* Back button */
+            .back-btn {
+                position: fixed; top: 32px; left: 36px; z-index: 50;
+                width: 44px; height: 44px; border-radius: 50%;
+                background: rgba(252,188,215,0.06);
+                border: 1px solid rgba(252,188,215,0.15);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; transition: all 0.3s ease;
+                color: #FCBCD7; text-decoration: none;
+            }
+            .back-btn svg { width: 24px; height: 24px; fill: currentColor; }
+            .back-btn:hover {
+                background: rgba(252,188,215,0.12);
+                border-color: rgba(252,188,215,0.35);
+                box-shadow: 0 0 16px rgba(191,80,130,0.3);
+                transform: scale(1.08);
+            }
+
+            /* Centre content */
+            .centre {
+                position: relative; z-index: 2;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                height: 100vh;
+                text-align: center;
+                gap: 0;
+            }
+
+            .eyebrow {
+                font-size: 11px; font-weight: 500;
+                letter-spacing: 3px; text-transform: uppercase;
+                color: #E56AB3; margin-bottom: 18px;
+                opacity: 0; transform: translateY(10px);
+                animation: fadeUp 0.6s ease 0.3s forwards;
+            }
+
+            h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(36px, 5vw, 60px);
+                font-weight: 700;
+                color: #FCBCD7;
+                line-height: 1.15;
+                margin-bottom: 14px;
+                opacity: 0; transform: translateY(12px);
+                animation: fadeUp 0.6s ease 0.5s forwards;
+            }
+
+            .subtitle {
+                font-size: 16px; font-weight: 300;
+                color: rgba(252,188,215,0.6);
+                letter-spacing: 0.5px;
+                margin-bottom: 64px;
+                opacity: 0; transform: translateY(12px);
+                animation: fadeUp 0.6s ease 0.65s forwards;
+            }
+
+            /* Cards row */
+            .cards {
+                display: flex; gap: 28px;
+                opacity: 0; transform: translateY(16px);
+                animation: fadeUp 0.6s ease 0.85s forwards;
+            }
+
+            .card {
+                position: relative;
+                width: 180px; height: 220px;
+                border-radius: 20px;
+                background: rgba(252,188,215,0.04);
+                border: 1px solid rgba(252,188,215,0.12);
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                gap: 16px;
+                cursor: pointer;
+                text-decoration: none;
+                transition: background 0.3s ease, border-color 0.3s ease,
+                            box-shadow 0.3s ease, transform 0.3s ease;
+                overflow: hidden;
+            }
+            .card::before {
+                content: '';
+                position: absolute; inset: 0;
+                background: radial-gradient(circle at 50% 50%, rgba(229,106,179,0.12) 0%, transparent 70%);
+                opacity: 0; transition: opacity 0.4s ease;
+            }
+            .card:hover { border-color: rgba(252,188,215,0.35); transform: translateY(-6px); }
+            .card:hover::before { opacity: 1; }
+            .card:hover { box-shadow: 0 12px 40px rgba(191,80,130,0.25); }
+
+            .card-jp {
+                font-family: 'Playfair Display', serif;
+                font-size: 52px;
+                color: #FCBCD7;
+                line-height: 1;
+                transition: transform 0.3s ease;
+            }
+            .card:hover .card-jp { transform: scale(1.1); }
+
+            .card-label {
+                font-family: 'Inter', sans-serif;
+                font-size: 13px; font-weight: 500;
+                letter-spacing: 2px; text-transform: uppercase;
+                color: rgba(252,188,215,0.65);
+            }
+
+            @keyframes fadeUp {
+                to { opacity: 1; transform: none; }
+            }
+
+            /* Page transition overlay */
+            .page-fade {
+                position: fixed; inset: 0;
+                background: #0d0608;
+                z-index: 200;
+                opacity: 0; pointer-events: none;
+                transition: opacity 0.6s ease;
+            }
+            .page-fade.active { opacity: 1; pointer-events: all; }
+        </style>
+    </head>
+    <body>
+        <div class="bg-img"></div>
+        <div class="vignette"></div>
+        <div class="page-fade" id="pageFade"></div>
+
+        <!-- Back to Welcome -->
+        <a class="back-btn" href="/welcome#selection" title="Back to Welcome">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+
+        <div class="centre">
+            <div class="eyebrow">Writing Systems</div>
+            <h1>What do you want to learn?</h1>
+            <p class="subtitle">Choose a writing system to explore its character table.</p>
+
+            <div class="cards">
+                <a class="card" href="/hiragana-table" id="cardHiragana">
+                    <div class="card-jp">あ</div>
+                    <div class="card-label">Hiragana</div>
+                </a>
+                <a class="card" href="/katakana-table" id="cardKatakana">
+                    <div class="card-jp">ア</div>
+                    <div class="card-label">Katakana</div>
+                </a>
+                <a class="card" href="/kanji-table" id="cardKanji">
+                    <div class="card-jp">字</div>
+                    <div class="card-label">Kanji</div>
+                </a>
+            </div>
+        </div>
+
+        <script>
+            window.addEventListener('load', () => document.body.classList.add('loaded'));
+
+            // Smooth transition out on card click
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    const fade = document.getElementById('pageFade');
+                    fade.classList.add('active');
+                    setTimeout(() => { window.location.href = href; }, 650);
+                });
+            });
+
+            // Smooth transition out on back button
+            document.querySelector('.back-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                const fade = document.getElementById('pageFade');
+                fade.classList.add('active');
+                setTimeout(() => { window.location.href = href; }, 650);
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+# ─────────────────────────────────────────────────────────
+#  WRITING PRACTICE
+# ─────────────────────────────────────────────────────────
+
+@router.get("/writing-practice", response_class=HTMLResponse)
+async def writing_practice():
+    """Writing practice menu with system selection and amount slider."""
+    return r"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Writing Practice — Tenjin-Ya</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; background: #0d0608; color: #FCBCD7; opacity: 0; transition: opacity 0.9s ease; user-select: none; }
+            body.loaded { opacity: 1; }
+            .bg-img { position: fixed; inset: 0; background: url('/textures/island1 (1).png') no-repeat center center / cover; opacity: 0.22; z-index: 0; pointer-events: none; }
+            .vignette { position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 20%, #0d0608 88%); z-index: 1; pointer-events: none; }
+            .back-btn { position: fixed; top: 32px; left: 36px; z-index: 50; width: 44px; height: 44px; border-radius: 50%; background: rgba(252,188,215,0.06); border: 1px solid rgba(252,188,215,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; color: #FCBCD7; text-decoration: none; }
+            .back-btn svg { width: 24px; height: 24px; fill: currentColor; }
+            .back-btn:hover { background: rgba(252,188,215,0.12); border-color: rgba(252,188,215,0.35); box-shadow: 0 0 16px rgba(191,80,130,0.3); transform: scale(1.08); }
+            .centre { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; gap: 0; }
+            .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: #E56AB3; margin-bottom: 18px; opacity: 0; transform: translateY(10px); animation: fadeUp 0.6s ease 0.3s forwards; }
+            h1 { font-family: 'Playfair Display', serif; font-size: clamp(36px, 5vw, 60px); font-weight: 700; color: #FCBCD7; line-height: 1.15; margin-bottom: 14px; opacity: 0; transform: translateY(12px); animation: fadeUp 0.6s ease 0.5s forwards; }
+            .subtitle { font-size: 16px; font-weight: 300; color: rgba(252,188,215,0.6); letter-spacing: 0.5px; margin-bottom: 64px; opacity: 0; transform: translateY(12px); animation: fadeUp 0.6s ease 0.65s forwards; }
+            .cards { display: flex; gap: 28px; opacity: 0; transform: translateY(16px); animation: fadeUp 0.6s ease 0.85s forwards; }
+            .card { position: relative; width: 180px; height: 220px; border-radius: 20px; background: rgba(252,188,215,0.04); border: 1px solid rgba(252,188,215,0.12); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; cursor: pointer; text-decoration: none; transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease; overflow: hidden; }
+            .card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(229,106,179,0.12) 0%, transparent 70%); opacity: 0; transition: opacity 0.4s ease; }
+            .card:hover { border-color: rgba(252,188,215,0.35); transform: translateY(-6px); }
+            .card:hover::before { opacity: 1; }
+            .card:hover { box-shadow: 0 12px 40px rgba(191,80,130,0.25); }
+            .card-jp { font-family: 'Playfair Display', serif; font-size: 52px; color: #FCBCD7; line-height: 1; transition: transform 0.3s ease; }
+            .card:hover .card-jp { transform: scale(1.1); }
+            .card-label { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: rgba(252,188,215,0.65); pointer-events: none; }
+            @keyframes fadeUp { to { opacity: 1; transform: none; } }
+            
+            /* Popup styles */
+            .popup-overlay { position: fixed; inset: 0; background: rgba(13,6,8,0.8); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+            .popup-overlay.active { opacity: 1; pointer-events: all; }
+            .popup-box { background: rgba(20, 10, 15, 0.95); border: 1px solid rgba(252,188,215,0.2); border-radius: 24px; padding: 40px; width: 400px; max-width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 20px rgba(229,106,179,0.1); transform: translateY(20px); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); text-align: center; }
+            .popup-overlay.active .popup-box { transform: translateY(0); }
+            .popup-box h2 { font-family: 'Playfair Display', serif; font-size: 28px; color: #FCBCD7; margin-bottom: 12px; }
+            .popup-box p { color: rgba(252,188,215,0.7); font-size: 15px; margin-bottom: 30px; }
+            .slider-container { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }
+            .slider-container span { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; color: #E56AB3; width: 30px; text-align: center; }
+            input[type=range] { flex: 1; -webkit-appearance: none; background: transparent; }
+            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #E56AB3; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(229,106,179,0.5); }
+            input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(252,188,215,0.2); border-radius: 2px; }
+            .btn-group { display: flex; gap: 16px; }
+            .btn { flex: 1; padding: 12px; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; }
+            .btn-cancel { background: transparent; border: 1px solid rgba(252,188,215,0.3); color: #FCBCD7; }
+            .btn-cancel:hover { background: rgba(252,188,215,0.1); }
+            .btn-start { background: linear-gradient(135deg, #E56AB3 0%, #BF5082 100%); border: none; color: #fff; }
+            .btn-start:hover { box-shadow: 0 0 20px rgba(191,80,130,0.4); transform: translateY(-2px); }
+        </style>
+    </head>
+    <body>
+        <div class="bg-img"></div>
+        <div class="vignette"></div>
+        <a class="back-btn" href="/welcome#selection" title="Back to Welcome">
+            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </a>
+
+        <div class="centre">
+            <div class="eyebrow">Writing Practice</div>
+            <h1>What do you want to practice?</h1>
+            <p class="subtitle">Select a writing system to start your drawing session.</p>
+
+            <div class="cards">
+                <div class="card" data-system="hiragana" data-max="46">
+                    <div class="card-jp">あ</div>
+                    <div class="card-label">Hiragana</div>
+                </div>
+                <div class="card" data-system="katakana" data-max="46">
+                    <div class="card-jp">ア</div>
+                    <div class="card-label">Katakana</div>
+                </div>
+                <div class="card" data-system="kanji" data-max="30">
+                    <div class="card-jp">字</div>
+                    <div class="card-label">Kanji</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="popup-overlay" id="popupOverlay">
+            <div class="popup-box">
+                <h2 id="popupTitle">Practice</h2>
+                <p>How many characters do you want to practice?</p>
+                <div class="slider-container">
+                    <span id="sliderCur">1</span>
+                    <input type="range" id="popupSlider" min="1" max="46" value="7">
+                    <span id="sliderMaxTxt">46</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-cancel" id="btnCancel">Cancel</button>
+                    <button class="btn btn-start" id="btnStart">Start</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            window.addEventListener('load', () => document.body.classList.add('loaded'));
+
+            const overlay = document.getElementById('popupOverlay');
+            const slider = document.getElementById('popupSlider');
+            const curTxt = document.getElementById('sliderCur');
+            const maxTxt = document.getElementById('sliderMaxTxt');
+            const title = document.getElementById('popupTitle');
+            let selectedSystem = '';
+
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', () => {
+                    selectedSystem = card.getAttribute('data-system');
+                    const max = parseInt(card.getAttribute('data-max'));
+                    title.innerText = 'Practice ' + selectedSystem.charAt(0).toUpperCase() + selectedSystem.slice(1);
+                    slider.max = max;
+                    slider.value = Math.min(7, max);
+                    curTxt.innerText = slider.value;
+                    maxTxt.innerText = max;
+                    overlay.classList.add('active');
+                });
+            });
+
+            slider.addEventListener('input', () => {
+                curTxt.innerText = slider.value;
+            });
+
+            document.getElementById('btnCancel').addEventListener('click', () => {
+                overlay.classList.remove('active');
+            });
+
+            document.getElementById('btnStart').addEventListener('click', () => {
+                window.location.href = `/writing-exercise?system=${selectedSystem}&count=${slider.value}`;
+            });
+            
+            document.querySelector('.back-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                document.body.style.opacity = '0';
+                setTimeout(() => { window.location.href = href; }, 650);
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+@router.get("/writing-exercise", response_class=HTMLResponse)
+async def writing_exercise(system: str = "hiragana", count: int = 1):
+    """The canvas exercise loop."""
+    return f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Practice {{system.capitalize()}} — Tenjin-Ya</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <style>
+            *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+            body {{ font-family: 'Inter', sans-serif; height: 100vh; background: #0d0608; color: #FCBCD7; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }}
+            .bg-img {{ position: fixed; inset: 0; background: url('/textures/tablepage.png') no-repeat center center / cover; opacity: 0.15; z-index: 0; pointer-events: none; }}
+            .container {{ position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 24px; width: 100%; max-width: 800px; }}
+            h1 {{ font-family: 'Playfair Display', serif; font-size: 42px; color: #FCBCD7; text-transform: capitalize; margin-bottom: 8px; }}
+            .eyebrow {{ font-size: 16px; font-weight: 500; letter-spacing: 2px; color: #E56AB3; text-transform: uppercase; margin-bottom: -16px; }}
+            .board-container {{ background: rgba(252,188,215,0.05); border: 1px solid rgba(252,188,215,0.15); border-radius: 24px; padding: 40px; box-shadow: 0 0 40px rgba(191,80,130,0.15); display: flex; flex-direction: column; align-items: center; gap: 24px; position:relative; overflow:hidden; }}
+            canvas {{ background: #fff; border-radius: 12px; cursor: crosshair; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); touch-action: none; }}
+            .controls {{ display: flex; gap: 16px; width: 100%; }}
+            button {{ flex: 1; padding: 14px; border-radius: 12px; border: 1px solid rgba(252,188,215,0.25); background: rgba(252,188,215,0.06); color: #FCBCD7; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; }}
+            button:hover {{ background: rgba(252,188,215,0.15); border-color: rgba(252,188,215,0.45); transform: translateY(-2px); }}
+            button.primary {{ background: linear-gradient(135deg, #E56AB3 0%, #BF5082 100%); color: #fff; border: none; }}
+            button.primary:hover {{ box-shadow: 0 0 20px rgba(191,80,130,0.4); }}
+            .result-panel {{ margin-top: 20px; font-size: 18px; color: #E56AB3; font-weight: 500; min-height: 27px; transition: opacity 0.3s ease; text-align: center; }}
+            .back-link {{ position: fixed; top: 32px; left: 36px; color: #FCBCD7; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; opacity: 0.7; transition: opacity 0.3s ease; z-index:50; }}
+            .back-link:hover {{ opacity: 1; }}
+            .progress-bar {{ position: absolute; top: 0; left: 0; height: 4px; background: #E56AB3; width: 0%; transition: width 0.3s ease; }}
+            .completion-overlay {{ position: absolute; inset: 0; background: rgba(13,6,8,0.9); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; border-radius: 24px; }}
+            .completion-overlay.active {{ opacity: 1; pointer-events: all; }}
+            .completion-overlay h2 {{ font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 24px; color: #FCBCD7; }}
+        </style>
+    </head>
+    <body>
+        <div class="bg-img"></div>
+        <a href="/writing-practice" class="back-link">
+            ← Back to Menu
+        </a>
+
+        <div class="container">
+            <div class="eyebrow" id="progressText">Exercise 1 of {{count}}</div>
+            <h1>Practice {{system}}</h1>
+            <p style="opacity: 0.6" id="promptText">Draw the character below</p>
+            
+            <div class="board-container">
+                <div class="progress-bar" id="progressBar"></div>
+                <canvas id="paintCanvas" width="400" height="400"></canvas>
+                <div class="controls">
+                    <button onclick="clearCanvas()">Clear Board</button>
+                    <button class="primary" onclick="recognize()">Recognize</button>
+                </div>
+                
+                <div class="completion-overlay" id="completionOverlay">
+                    <h2>Session Complete!</h2>
+                    <button class="primary" style="max-width: 200px" onclick="window.location.href='/writing-practice'">Finish</button>
+                </div>
+            </div>
+            
+            <div class="result-panel" id="resultText"></div>
+        </div>
+
+        <script>
+            const canvas = document.getElementById('paintCanvas');
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            
+            const totalCount = {count};
+            let currentCount = 1;
+
+            canvas.addEventListener('mousedown', (e) => {{ 
+                drawing = true; 
+                ctx.beginPath();
+                ctx.moveTo(e.offsetX, e.offsetY);
+            }});
+            window.addEventListener('mouseup', () => {{ drawing = false; }});
+            canvas.addEventListener('mousemove', (e) => {{
+                if (!drawing) return;
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#2d2d2d';
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }});
+
+            canvas.addEventListener('touchstart', (e) => {{
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                drawing = true;
+                ctx.beginPath();
+                ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                e.preventDefault();
+            }}, {{ passive: false }});
+            canvas.addEventListener('touchmove', (e) => {{
+                if (!drawing) return;
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#2d2d2d';
+                ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+                ctx.stroke();
+                e.preventDefault();
+            }}, {{ passive: false }});
+
+            function clearCanvas() {{
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                document.getElementById('resultText').innerText = "";
+            }}
+            
+            function updateProgress() {{
+                document.getElementById('progressText').innerText = `Exercise ${{currentCount}} of ${{totalCount}}`;
+                const pct = ((currentCount - 1) / totalCount) * 100;
+                document.getElementById('progressBar').style.width = pct + '%';
+            }}
+
+            async function recognize() {{
+                const resText = document.getElementById('resultText');
+                resText.innerText = "Analyzing Strokes...";
+                
+                setTimeout(() => {{
+                    resText.innerText = "AI Recognition placeholder: Looks good! Continuing...";
+                    setTimeout(nextExercise, 1500);
+                }}, 800);
+            }}
+            
+            function nextExercise() {{
+                if (currentCount >= totalCount) {{
+                    document.getElementById('progressBar').style.width = '100%';
+                    document.getElementById('completionOverlay').classList.add('active');
+                }} else {{
+                    currentCount++;
+                    updateProgress();
+                    clearCanvas();
+                    document.getElementById('resultText').innerText = "";
+                }}
+            }}
+            
+            updateProgress();
+        </script>
+    </body>
+    </html>
+    """
+
+# ─────────────────────────────────────────────────────────
 #  GRAMMAR API ENDPOINTS
 # ─────────────────────────────────────────────────────────
+
 
 @router.get("/api/grammar/user-status")
 async def grammar_user_status(request: Request):
@@ -426,6 +1002,7 @@ async def grammar_chapter(chapter_id: int):
             "exercises": [
                 {
                     "id":          e.id,
+                    "chapter_id":  e.chapter_id,
                     "title":       e.title,
                     "description": e.description or "",
                     "order_index": e.order_index,
@@ -451,10 +1028,16 @@ async def grammar_exercise_chapter(exercise_id: int):
 
 
 @router.get("/api/grammar/exercises")
-async def grammar_all_exercises():
-    """Return all grammar exercises ordered by chapter order_index then exercise order_index."""
+async def grammar_all_exercises(request: Request):
+    """Return all grammar exercises ordered by chapter order_index then exercise order_index with star info."""
+    email = request.cookies.get("user_email")
     db = SessionLocal()
     try:
+        from features.user.models import User, UserExerciseScore
+        user = None
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+            
         exercises = (
             db.query(Exercise, Chapter, Proficiency)
             .join(Chapter, Exercise.chapter_id == Chapter.id)
@@ -463,6 +1046,13 @@ async def grammar_all_exercises():
             .order_by(Chapter.order_index, Exercise.order_index)
             .all()
         )
+        
+        # Get stars for the current user
+        scores_map = {}
+        if user:
+            scores = db.query(UserExerciseScore).filter(UserExerciseScore.user_id == user.id).all()
+            scores_map = {s.exercise_id: s.stars for s in scores}
+            
         return JSONResponse([
             {
                 "id":          ex.id,
@@ -472,6 +1062,7 @@ async def grammar_all_exercises():
                 "level":       prof.level if prof else "N5",
                 "order_index": ex.order_index,
                 "chapter_index": ch.order_index,
+                "stars":       scores_map.get(ex.id, 0)
             }
             for ex, ch, prof in exercises
         ])
@@ -628,6 +1219,27 @@ async def course_grammar():
                 font-size: 11px; font-weight: 300;
                 color: rgba(252,188,215,0.45); line-height: 1.5;
             }
+            .ex-item.locked {
+                opacity: 0.35;
+                cursor: not-allowed;
+                position: relative;
+            }
+            .ex-item.locked:hover {
+                background: rgba(252,188,215,0.04);
+                border-color: rgba(252,188,215,0.07);
+            }
+            .ex-lock-icon {
+                font-size: 14px;
+                flex-shrink: 0;
+                margin-left: auto;
+                opacity: 0.6;
+            }
+            .ex-stars {
+                display: flex; gap: 2px; margin-top: 2px;
+            }
+            .ex-stars img {
+                width: 14px; height: 14px;
+            }
 
             /* empty state */
             .left-empty {
@@ -783,6 +1395,15 @@ async def course_grammar():
             }
             .node.active .node-number { font-size: 20px; color: #FCBCD7; }
             .node.previewed .node-number { color: #FCBCD7; }
+            .node.locked {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .node.locked:hover:not(.holding) {
+                transform: none;
+                border-color: rgba(252,188,215,0.20);
+                box-shadow: none;
+            }
 
             /* ── Node label (below) ── */
             .node-label {
@@ -1093,23 +1714,47 @@ async def course_grammar():
                     const ul = document.createElement('ul');
                     ul.className = 'exercises-list';
                     exs.forEach((ex, idx) => {
+                        // Check if this exercise is locked
+                        // Find this exercise in EXERCISES array to get its stars
+                        const exData = EXERCISES.find(e => e.id === ex.id);
+                        const prevExData = idx > 0 ? EXERCISES.find(e => e.id === exs[idx - 1].id) : null;
+                        const isLocked = idx > 0 && prevExData && (prevExData.stars || 0) < 2;
+
                         const li = document.createElement('li');
-                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '');
+                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '') + (isLocked ? ' locked' : '');
                         li.setAttribute('role', 'button');
-                        li.setAttribute('tabindex', '0');
+                        li.setAttribute('tabindex', isLocked ? '-1' : '0');
+                        
+                        // Stars display
+                        const stars = exData ? (exData.stars || 0) : 0;
+                        let starsHtml = '';
+                        if (stars > 0) {
+                            starsHtml = '<span class="ex-stars">';
+                            for (let s = 1; s <= 3; s++) {
+                                starsHtml += s <= stars 
+                                    ? '<img src="/icons/foxheadlighton.png" alt="★">' 
+                                    : '<img src="/icons/foxheadlightoff.png" alt="☆">';
+                            }
+                            starsHtml += '</span>';
+                        }
+
                         li.innerHTML = `
                             <span class="ex-num">${idx + 1}</span>
                             <span class="ex-text">
                                 <span class="ex-title">${ex.title}</span>
                                 ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
-                            </span>`;
-                        li.addEventListener('click', () => {
-                            window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || (idx + 1)}`;
-                        });
-                        li.addEventListener('keydown', e => {
-                            if (e.key === 'Enter' || e.key === ' ')
+                                ${starsHtml}
+                            </span>
+                            ${isLocked ? '<span class="ex-lock-icon">🔒</span>' : ''}`;
+                        if (!isLocked) {
+                            li.addEventListener('click', () => {
                                 window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || (idx + 1)}`;
-                        });
+                            });
+                            li.addEventListener('keydown', e => {
+                                if (e.key === 'Enter' || e.key === ' ')
+                                    window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || (idx + 1)}`;
+                            });
+                        }
                         ul.appendChild(li);
                     });
                     leftInner.appendChild(ul);
@@ -1151,11 +1796,15 @@ async def course_grammar():
                     wrapper.dataset.chapterId = ex.chapter_id;
                     wrapper.setAttribute('role', 'listitem');
 
+                    // Check if locked
+                    const exIdx = EXERCISES.findIndex(e => e.id === ex.id);
+                    const isLocked = exIdx > 0 && (EXERCISES[exIdx - 1].stars || 0) < 2;
+
                     const node = document.createElement('div');
-                    node.className = 'node' + (isActive ? ' active' : '');
+                    node.className = 'node' + (isActive ? ' active' : '') + (isLocked ? ' locked' : '');
                     if (isActive) node.id = 'active-node';
                     node.setAttribute('aria-label', `${ex.title} — ${ex.level}`);
-                    node.setAttribute('tabindex', '0');
+                    node.setAttribute('tabindex', isLocked ? '-1' : '0');
                     node.setAttribute('role', 'button');
 
                     const num = document.createElement('span');
@@ -1204,6 +1853,14 @@ async def course_grammar():
             function attachNodeEvents(nodeEl, ex) {
                 let localDownTime = 0;
 
+                // Check if this exercise is locked
+                function isExLocked() {
+                    const exIdx = EXERCISES.findIndex(e => e.id === ex.id);
+                    if (exIdx <= 0) return false; // First exercise or not found
+                    const prevEx = EXERCISES[exIdx - 1];
+                    return (prevEx.stars || 0) < 2;
+                }
+
                 // ── HOVER: update left panel on mouseenter ──
                 nodeEl.addEventListener('mouseenter', () => {
                     setPreview(nodeEl, ex);
@@ -1220,7 +1877,7 @@ async def course_grammar():
                     if (isDragging) return; // drag happened — ignore
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
-                        // click → navigate
+                        if (isExLocked()) return; // Don't navigate to locked exercise
                         window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 }
@@ -1238,12 +1895,14 @@ async def course_grammar():
                     if (isDragging) return;
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
+                        if (isExLocked()) return;
                         window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
 
                 nodeEl.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
+                        if (isExLocked()) return;
                         window.location.href = `/course/grammar/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
@@ -1562,6 +2221,27 @@ async def course_vocabulary():
                 font-size: 11px; font-weight: 300;
                 color: rgba(252,188,215,0.45); line-height: 1.5;
             }
+            .ex-item.locked {
+                opacity: 0.35;
+                cursor: not-allowed;
+                position: relative;
+            }
+            .ex-item.locked:hover {
+                background: rgba(252,188,215,0.04);
+                border-color: rgba(252,188,215,0.07);
+            }
+            .ex-lock-icon {
+                font-size: 14px;
+                flex-shrink: 0;
+                margin-left: auto;
+                opacity: 0.6;
+            }
+            .ex-stars {
+                display: flex; gap: 2px; margin-top: 2px;
+            }
+            .ex-stars img {
+                width: 14px; height: 14px;
+            }
 
             /* empty state */
             .left-empty {
@@ -1717,6 +2397,15 @@ async def course_vocabulary():
             }
             .node.active .node-number { font-size: 20px; color: #FCBCD7; }
             .node.previewed .node-number { color: #FCBCD7; }
+            .node.locked {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .node.locked:hover:not(.holding) {
+                transform: none;
+                border-color: rgba(252,188,215,0.20);
+                box-shadow: none;
+            }
 
             /* ── Node label (below) ── */
             .node-label {
@@ -2027,23 +2716,46 @@ async def course_vocabulary():
                     const ul = document.createElement('ul');
                     ul.className = 'exercises-list';
                     exs.forEach((ex, idx) => {
+                        // Check if this exercise is locked
+                        const exData = EXERCISES.find(e => e.id === ex.id);
+                        const prevExData = idx > 0 ? EXERCISES.find(e => e.id === exs[idx - 1].id) : null;
+                        const isLocked = idx > 0 && prevExData && (prevExData.stars || 0) < 2;
+
                         const li = document.createElement('li');
-                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '');
+                        li.className = 'ex-item' + (ex.id === currentExId ? ' current' : '') + (isLocked ? ' locked' : '');
                         li.setAttribute('role', 'button');
-                        li.setAttribute('tabindex', '0');
+                        li.setAttribute('tabindex', isLocked ? '-1' : '0');
+                        
+                        // Stars display
+                        const stars = exData ? (exData.stars || 0) : 0;
+                        let starsHtml = '';
+                        if (stars > 0) {
+                            starsHtml = '<span class="ex-stars">';
+                            for (let s = 1; s <= 3; s++) {
+                                starsHtml += s <= stars 
+                                    ? '<img src="/icons/foxheadlighton.png" alt="★">' 
+                                    : '<img src="/icons/foxheadlightoff.png" alt="☆">';
+                            }
+                            starsHtml += '</span>';
+                        }
+
                         li.innerHTML = `
                             <span class="ex-num">${idx + 1}</span>
                             <span class="ex-text">
                                 <span class="ex-title">${ex.title}</span>
                                 ${ex.description ? `<span class="ex-desc">${ex.description}</span>` : ''}
-                            </span>`;
-                        li.addEventListener('click', () => {
-                            window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
-                        });
-                        li.addEventListener('keydown', e => {
-                            if (e.key === 'Enter' || e.key === ' ')
-                                window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || (idx + 1)}`;
-                        });
+                                ${starsHtml}
+                            </span>
+                            ${isLocked ? '<span class="ex-lock-icon">🔒</span>' : ''}`;
+                        if (!isLocked) {
+                            li.addEventListener('click', () => {
+                                window.location.href = `/course/vocabulary/Chapter${ex.chapter_id || chapterId}/exercise/${ex.id}`;
+                            });
+                            li.addEventListener('keydown', e => {
+                                if (e.key === 'Enter' || e.key === ' ')
+                                    window.location.href = `/course/vocabulary/Chapter${ex.chapter_id || chapterId}/exercise/${ex.id}`;
+                            });
+                        }
                         ul.appendChild(li);
                     });
                     leftInner.appendChild(ul);
@@ -2085,11 +2797,15 @@ async def course_vocabulary():
                     wrapper.dataset.chapterId = ex.chapter_id;
                     wrapper.setAttribute('role', 'listitem');
 
+                    // Check if locked
+                    const exIdx = EXERCISES.findIndex(e => e.id === ex.id);
+                    const isLocked = exIdx > 0 && (EXERCISES[exIdx - 1].stars || 0) < 2;
+
                     const node = document.createElement('div');
-                    node.className = 'node' + (isActive ? ' active' : '');
+                    node.className = 'node' + (isActive ? ' active' : '') + (isLocked ? ' locked' : '');
                     if (isActive) node.id = 'active-node';
                     node.setAttribute('aria-label', `${ex.title} — ${ex.level}`);
-                    node.setAttribute('tabindex', '0');
+                    node.setAttribute('tabindex', isLocked ? '-1' : '0');
                     node.setAttribute('role', 'button');
 
                     const num = document.createElement('span');
@@ -2138,6 +2854,14 @@ async def course_vocabulary():
             function attachNodeEvents(nodeEl, ex) {
                 let localDownTime = 0;
 
+                // Check if this exercise is locked
+                function isExLocked() {
+                    const exIdx = EXERCISES.findIndex(e => e.id === ex.id);
+                    if (exIdx <= 0) return false; // First exercise or not found
+                    const prevEx = EXERCISES[exIdx - 1];
+                    return (prevEx.stars || 0) < 2;
+                }
+
                 // ── HOVER: update left panel on mouseenter ──
                 nodeEl.addEventListener('mouseenter', () => {
                     setPreview(nodeEl, ex);
@@ -2154,8 +2878,8 @@ async def course_vocabulary():
                     if (isDragging) return; // drag happened — ignore
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
-                        // click → navigate
-                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        if (isExLocked()) return; // Don't navigate to locked exercise
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 }
 
@@ -2172,13 +2896,15 @@ async def course_vocabulary():
                     if (isDragging) return;
                     const elapsed = performance.now() - localDownTime;
                     if (elapsed < 400) {
-                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        if (isExLocked()) return;
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
 
                 nodeEl.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_index || 1}/exercise${ex.order_index || 1}`;
+                        if (isExLocked()) return;
+                        window.location.href = `/course/vocabulary/Chapter${ex.chapter_id || 1}/exercise/${ex.id || 1}`;
                     }
                 });
             }
@@ -2382,7 +3108,7 @@ async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
             /* Background */
             .bg-img {
                 position: fixed; inset: 0;
-                background: url('/textures/tablepage.png') no-repeat center center / cover;
+                background: url('/textures/island1 (1).png') no-repeat center center / cover;
                 opacity: 0.22; z-index: 0; pointer-events: none;
             }
             .vignette {
@@ -2841,6 +3567,7 @@ async def vocabulary_chapter(chapter_id: int):
             "exercises": [
                 {
                     "id":          e.id,
+                    "chapter_id":  e.chapter_id,
                     "title":       e.title,
                     "description": e.description or "",
                     "order_index": e.order_index,
@@ -2856,9 +3583,15 @@ async def vocabulary_exercise_chapter(exercise_id: int):
     return await grammar_exercise_chapter(exercise_id)
 
 @router.get("/api/vocabulary/exercises")
-async def vocabulary_all_exercises():
+async def vocabulary_all_exercises(request: Request):
+    email = request.cookies.get("user_email")
     db = SessionLocal()
     try:
+        from features.user.models import User, UserExerciseScore
+        user = None
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+            
         exercises = (
             db.query(Exercise, Chapter, Proficiency)
             .join(Chapter, Exercise.chapter_id == Chapter.id)
@@ -2867,6 +3600,13 @@ async def vocabulary_all_exercises():
             .order_by(Chapter.order_index, Exercise.order_index)
             .all()
         )
+        
+        # Get stars for the current user
+        scores_map = {}
+        if user:
+            scores = db.query(UserExerciseScore).filter(UserExerciseScore.user_id == user.id).all()
+            scores_map = {s.exercise_id: s.stars for s in scores}
+            
         return JSONResponse([
             {
                 "id":          ex.id,
@@ -2876,6 +3616,7 @@ async def vocabulary_all_exercises():
                 "level":       prof.level if prof else "N5",
                 "order_index": ex.order_index,
                 "chapter_index": ch.order_index,
+                "stars":       scores_map.get(ex.id, 0)
             }
             for ex, ch, prof in exercises
         ])

@@ -1,6 +1,6 @@
 import json
 
-def render_exercise_runner(exercise, tests, chapter_id):
+def render_exercise_runner(exercise, tests, chapter_id, category="grammar"):
     tests_json = json.dumps([{
         'id': t.id,
         'test_type': t.test_type,
@@ -28,12 +28,13 @@ def render_exercise_runner(exercise, tests, chapter_id):
             font-family: 'Inter', sans-serif;
             background: #0d0608;
             color: #FCBCD7;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            padding: 20px 20px 100px 20px;
+            gap: 10px;
         }}
 
         /* Background layout */
@@ -45,14 +46,51 @@ def render_exercise_runner(exercise, tests, chapter_id):
 
         /* Top Bar */
         .top-bar {{
-            position: fixed; top: 40px; width: 80%; max-width: 800px;
+            width: 80%; max-width: 800px;
             display: flex; flex-direction: column; gap: 10px;
+            margin-top: 20px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
         }}
         .stars-container {{
-            display: flex; justify-content: center; gap: 15px; font-size: 24px; color: rgba(252,188,215,0.2);
+            display: flex; justify-content: center; gap: 40px; margin-bottom: 10px;
         }}
-        .star {{ transition: color 0.5s ease, transform 0.5s ease; }}
-        .star.earned {{ color: #FFD700; transform: scale(1.2); text-shadow: 0 0 10px rgba(255,215,0,0.5); }}
+        .star-box {{
+            position: relative;
+            width: 120px;
+            height: 120px;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }}
+        .star-box.earned {{
+            transform: scale(1.15);
+        }}
+        .fox-icon {{
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }}
+        .fox-off {{
+            background-image: url('/icons/foxheadlightoff.png');
+            opacity: 1;
+            transition: opacity 0.6s ease;
+        }}
+        .fox-on {{
+            background-image: url('/icons/foxheadlighton.png');
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            filter: drop-shadow(0 0 8px rgba(252, 188, 215, 0.4));
+        }}
+        .star-box.earned .fox-off {{
+            opacity: 0;
+        }}
+        .star-box.earned .fox-on {{
+            opacity: 1;
+        }}
 
         .progress-container {{ display: flex; align-items: center; gap: 20px; }}
         .progress-bar {{
@@ -96,12 +134,16 @@ def render_exercise_runner(exercise, tests, chapter_id):
             background: rgba(252,188,215,0.03);
             border: 1px solid rgba(252,188,215,0.1);
             border-radius: 20px;
-            padding: 40px; width: 90%; max-width: 700px; min-height: 400px;
+            padding: 40px; width: 90%; max-width: 700px; min-height: 350px;
             display: flex; flex-direction: column; align-items: center;
             box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-            position: relative; transition: all 0.5s ease;
+            transition: all 0.5s ease;
             transform: translateY(20px); opacity: 0;
             visibility: hidden;
+            margin-top: 30px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 5;
         }}
         .exercise-card.visible {{ transform: none; opacity: 1; visibility: visible; }}
 
@@ -182,8 +224,12 @@ def render_exercise_runner(exercise, tests, chapter_id):
             box-shadow: 0 0 50px rgba(229,106,179,0.2); z-index: 10;
         }}
         .results-title {{ font-family: 'Playfair Display', serif; font-size: 48px; color: #E56AB3; margin-bottom: 10px; }}
-        .results-stars {{ font-size: 40px; margin-bottom: 20px; color: rgba(252,188,215,0.2); display: flex; gap: 10px; }}
-        .results-stars .earned {{ color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.6); }}
+        
+        .results-stars {{ 
+            display: flex; gap: 40px; margin-bottom: 40px; justify-content: center;
+        }}
+        .results-stars .star-box {{ width: 180px; height: 180px; }}
+
         .results-score {{ font-size: 24px; font-weight: 500; font-family: 'Inter', sans-serif; color: rgba(252,188,215,0.8); margin-bottom: 40px; }}
         
         .results-buttons {{ display: flex; gap: 20px; }}
@@ -208,9 +254,18 @@ def render_exercise_runner(exercise, tests, chapter_id):
 
     <div class="top-bar">
         <div class="stars-container" id="starsContainer">
-            <span class="star" id="star1">★</span>
-            <span class="star" id="star2">★</span>
-            <span class="star" id="star3">★</span>
+            <div class="star-box" id="star1">
+                <div class="fox-icon fox-off"></div>
+                <div class="fox-icon fox-on"></div>
+            </div>
+            <div class="star-box" id="star2">
+                <div class="fox-icon fox-off"></div>
+                <div class="fox-icon fox-on"></div>
+            </div>
+            <div class="star-box" id="star3">
+                <div class="fox-icon fox-off"></div>
+                <div class="fox-icon fox-on"></div>
+            </div>
         </div>
         <div class="progress-container">
             <div class="progress-counter" id="progressCount">1 / 15</div>
@@ -225,12 +280,12 @@ def render_exercise_runner(exercise, tests, chapter_id):
     <div class="results-screen" id="resultsScreen">
         <h2 class="results-title">Exercise Complete</h2>
         <div class="results-stars" id="finalStars">
-            <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+            <!-- Injected -->
         </div>
         <div class="results-score" id="finalScoreText">12 / 15 (80%)</div>
         <div class="results-buttons">
             <button class="btn-retry" onclick="location.reload()">Retry</button>
-            <button class="check-btn" onclick="window.location.href='/course/grammar'">Continue</button>
+            <button class="check-btn" onclick="window.location.href='/course/{category}'">Continue</button>
         </div>
     </div>
 
@@ -441,7 +496,7 @@ def render_exercise_runner(exercise, tests, chapter_id):
             }}
 
             // Normalise strings by removing all spaces to check for equality without space sensitivity
-            const normalize = (str) => (str || "").replace(/\s+/g, "");
+            const normalize = (str) => (str || "").replace(/\\s+/g, "");
 
             if (normalize(UserAnswer) === normalize(test.correct_answer)) {{
                 if(isFirstAttemptForCurrentQuestion) {{
@@ -478,14 +533,30 @@ def render_exercise_runner(exercise, tests, chapter_id):
             if(firstAttemptSuccesses >= 5) starCount++;
             if(firstAttemptSuccesses >= 10) starCount++;
             if(firstAttemptSuccesses >= 15) starCount++;
-            for(let i=0; i<3; i++) {{
-                if(i < starCount) starsHtml += '<span class="star earned">★</span>';
-                else starsHtml += '<span class="star">★</span>';
+            
+            for(let i=1; i<=3; i++) {{
+                const earnedClass = i <= starCount ? 'earned' : '';
+                starsHtml += `
+                    <div class="star-box ${{earnedClass}}">
+                        <div class="fox-icon fox-off"></div>
+                        <div class="fox-icon fox-on"></div>
+                    </div>
+                `;
             }}
             document.getElementById('finalStars').innerHTML = starsHtml;
             
             let pct = Math.round((tests.length > 0 ? (score / tests.length) : 0) * 100);
             document.getElementById('finalScoreText').innerText = `${{score}} / ${{tests.length}} (${{pct}}%)`;
+
+            // POST results to backend
+            fetch('/api/exercise/complete', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    exercise_id: {exercise.id},
+                    stars: starCount
+                }})
+            }}).then(r => r.json()).then(data => console.log("Progress saved:", data));
         }}
 
         function showHint(text) {{

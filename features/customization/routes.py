@@ -61,11 +61,17 @@ def profile_page(request: Request, user_email: Optional[str] = Cookie(None)):
         else:
             achievements.append(default_ach)
 
+    BANNER_MAP = {
+        1: {"name": "Default Banner", "image_url": "/customisableprofile/defaultsettings/bannerdefault.png"},
+        4: {"name": "Admin Banner", "image_url": "/customisableprofile/unloackablebanners/Admin banner.png"}
+    }
+    
     # Load owned items
     owned_banner_items = db.query(UserItem).filter(UserItem.user_id == db_user.id, UserItem.item_type == "banner").all()
     owned_banners = []
     for ui in owned_banner_items:
-        owned_banners.append({"id": ui.item_id, "name": f"Banner #{ui.item_id}", "image_url": f"/customisableprofile/banners/{ui.item_id}.png"})
+        banner_info = BANNER_MAP.get(ui.item_id, {"name": f"Banner #{ui.item_id}", "image_url": f"/customisableprofile/banners/{ui.item_id}.png"})
+        owned_banners.append({"id": ui.item_id, "name": banner_info["name"], "image_url": banner_info["image_url"]})
 
     owned_ach_items = db.query(UserItem).filter(UserItem.user_id == db_user.id, UserItem.item_type == "achievement").all()
     owned_achievements = []
@@ -222,7 +228,17 @@ async def equip_banner(body: EquipBannerRequest, user_email: Optional[str] = Coo
     if not owns:
         db.close()
         raise HTTPException(status_code=403, detail="You don't own this banner")
-    banner_url = f"/customisableprofile/banners/{body.item_id}.png"
+        
+    BANNER_MAP = {
+        1: {"name": "Default Banner", "image_url": "/customisableprofile/defaultsettings/bannerdefault.png"},
+        4: {"name": "Admin Banner", "image_url": "/customisableprofile/unloackablebanners/Admin banner.png"}
+    }
+    banner_info = BANNER_MAP.get(body.item_id)
+    if banner_info:
+        banner_url = banner_info["image_url"]
+    else:
+        banner_url = f"/customisableprofile/banners/{body.item_id}.png"
+        
     profile.banner_url = banner_url
     db.commit()
     db.close()

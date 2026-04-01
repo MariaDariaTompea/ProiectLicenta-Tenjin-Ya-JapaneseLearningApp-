@@ -1,6 +1,6 @@
 """User, UserProfile, UserPhoto, UserItem, and StatusLearning models"""
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from core.database import Base
 from datetime import datetime
@@ -22,6 +22,7 @@ class User(Base):
     photos = relationship("UserPhoto", back_populates="user", cascade="all, delete-orphan")
     items = relationship("UserItem", back_populates="user", cascade="all, delete-orphan")
     status = relationship("StatusLearning", uselist=False, back_populates="user", cascade="all, delete-orphan")
+    exercise_scores = relationship("UserExerciseScore", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserProfile(Base):
@@ -87,3 +88,17 @@ class UserItem(Base):
     acquired_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="items")
+
+
+class UserExerciseScore(Base):
+    """Tracks a user's score/stars for a specific exercise"""
+    __tablename__ = "user_exercise_scores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    stars = Column(Integer, default=0)
+    completed = Column(Boolean, default=False, nullable=False, server_default="0")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="exercise_scores")
