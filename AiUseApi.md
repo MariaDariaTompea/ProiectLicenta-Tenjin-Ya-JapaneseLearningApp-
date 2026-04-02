@@ -52,15 +52,15 @@ The solution implemented to resolve the transparency conflict involves a seconda
 
 ```mermaid
 graph TD
-    A[User Strokes (Mouse/Touch)] --> B[HTML Canvas Context]
-    B --> C{Background Opaque?}
-    C -- No --> D[Create Offscreen Canvas Context]
-    D --> E[Fill Opaque White Rectangle]
-    E --> F[drawImage: Stamp Original Strokes]
+    A["User Strokes (Mouse/Touch)"] --> B["HTML Canvas Context"]
+    B --> C{"Background Opaque?"}
+    C -- No --> D["Create Offscreen Canvas Context"]
+    D --> E["Fill Opaque White Rectangle"]
+    E --> F["drawImage: Stamp Original Strokes"]
     C -- Yes --> F
-    F --> G[toDataURL]
-    G --> H[Base64 PNG Image String]
-    H --> I[JSON Payload Transmission]
+    F --> G["toDataURL"]
+    G --> H["Base64 PNG Image String"]
+    H --> I["JSON Payload Transmission"]
 ```
 
 ---
@@ -112,11 +112,11 @@ Because CNNs are spatially invariant, whether the user draws their character per
 
 ```mermaid
 graph LR
-    A[Raw Binarized Image Map] --> B(Conv Layer 1: Edges in strokes)
-    B --> C(Pool Layer: Shrink data)
-    C --> D(Conv Layer 2: Shape Combinations)
-    D --> E(Dense Feature Map Vector)
-    E --> F[Sequence alignment Layer]
+    A["Raw Binarized Image Map"] --> B("Conv Layer 1: Edges in strokes")
+    B --> C("Pool Layer: Shrink data")
+    C --> D("Conv Layer 2: Shape Combinations")
+    D --> E("Dense Feature Map Vector")
+    E --> F["Sequence alignment Layer"]
 ```
 
 ### Stage C: Sequence Processing (The RNN/LSTM Layer)
