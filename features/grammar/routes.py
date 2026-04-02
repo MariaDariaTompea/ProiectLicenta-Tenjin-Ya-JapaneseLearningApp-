@@ -5,6 +5,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from core.database import SessionLocal
 from features.user.models import User
 from features.grammar.models import Proficiency, Chapter, Exercise
+import json
+import base64
+import io
+import random
+from pydantic import BaseModel
+try:
+    from google.cloud import vision
+except ImportError:
+    vision = None
 
 router = APIRouter()
 
@@ -802,16 +811,68 @@ async def writing_practice():
     </html>
     """
 
+class WritingSubmission(BaseModel):
+    image: str
+    expected_character: str
+
+@router.post("/api/verify-writing")
+def verify_writing(submission: WritingSubmission):
+    if not vision:
+        return {"is_correct": True, "detected_character": "Cloud Vision not installed"}
+    
+    try:
+        base64_data = submission.image.split(",")[1] if "," in submission.image else submission.image
+        image_bytes = base64.b64decode(base64_data)
+        
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image(content=image_bytes)
+        image_context = vision.ImageContext(language_hints=["ja"])
+        response = client.document_text_detection(image=image, image_context=image_context)
+        
+        if response.error.message:
+            return {"is_correct": False, "detected_character": "Error reading image"}
+            
+        detected = ""
+        if response.text_annotations:
+            detected = response.text_annotations[0].description.strip()
+            
+        is_correct = submission.expected_character in detected
+        return {
+            "is_correct": is_correct,
+            "detected_character": detected if detected else "Nothing detected"
+        }
+    except Exception as e:
+        return {"is_correct": False, "detected_character": str(e)}
+
 @router.get("/writing-exercise", response_class=HTMLResponse)
 async def writing_exercise(system: str = "hiragana", count: int = 1):
-    """The canvas exercise loop."""
+    """The canvas exercise loop equipped with AI."""
+    hiragana = ["あ","い","う","え","お","か","き","く","け","こ"]
+    katakana = ["ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ"]
+    kanji = ["一","二","三","四","五","六","七","八","九","十"]
+    
+    if system == "hiragana":
+        chars = random.sample(hiragana, min(count, len(hiragana)))
+    elif system == "katakana":
+        chars = random.sample(katakana, min(count, len(katakana)))
+    elif system == "kanji":
+        chars = random.sample(kanji, min(count, len(kanji)))
+    else:
+        chars = ["あ"] * count
+
+    # Failsafe in case count > length
+    if len(chars) < count:
+        chars.extend([chars[0]] * (count - len(chars)))
+
+    chars_json = json.dumps(chars)
+
     return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Practice {{system.capitalize()}} — Tenjin-Ya</title>
+        <title>Practice {system.capitalize()} — Tenjin-Ya</title>
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
         <style>
             *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -843,16 +904,16 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
         </a>
 
         <div class="container">
-            <div class="eyebrow" id="progressText">Exercise 1 of {{count}}</div>
-            <h1>Practice {{system}}</h1>
-            <p style="opacity: 0.6" id="promptText">Draw the character below</p>
+            <div class="eyebrow" id="progressText">Exercise 1 of {count}</div>
+            <h1>Practice {system.capitalize()}</h1>
+            <h2 style="font-size: 48px; margin: 10px 0; color: #fff;" id="promptText">あ</h2>
             
             <div class="board-container">
                 <div class="progress-bar" id="progressBar"></div>
                 <canvas id="paintCanvas" width="400" height="400"></canvas>
                 <div class="controls">
                     <button onclick="clearCanvas()">Clear Board</button>
-                    <button class="primary" onclick="recognize()">Recognize</button>
+                    <button class="primary" id="recognizeBtn" onclick="recognize()">Recognize</button>
                 </div>
                 
                 <div class="completion-overlay" id="completionOverlay">
@@ -870,6 +931,7 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
             let drawing = false;
             
             const totalCount = {count};
+            const practiceChars = {chars_json};
             let currentCount = 1;
 
             canvas.addEventListener('mousedown', (e) => {{ 
@@ -911,22 +973,93 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
             function clearCanvas() {{
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 document.getElementById('resultText').innerText = "";
+                document.getElementById('resultText').style.color = "#E56AB3";
             }}
             
             function updateProgress() {{
                 document.getElementById('progressText').innerText = `Exercise ${{currentCount}} of ${{totalCount}}`;
+                document.getElementById('promptText').innerText = practiceChars[currentCount - 1];
                 const pct = ((currentCount - 1) / totalCount) * 100;
                 document.getElementById('progressBar').style.width = pct + '%';
             }}
 
-            async function recognize() {{
-                const resText = document.getElementById('resultText');
-                resText.innerText = "Analyzing Strokes...";
+            function getCroppedCanvas() {{
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                let hasPixels = false;
+
+                for (let y = 0; y < canvas.height; y++) {{
+                    for (let x = 0; x < canvas.width; x++) {{
+                        const alpha = data[(y * canvas.width + x) * 4 + 3];
+                        if (alpha > 0) {{
+                            minX = Math.min(minX, x);
+                            minY = Math.min(minY, y);
+                            maxX = Math.max(maxX, x);
+                            maxY = Math.max(maxY, y);
+                            hasPixels = true;
+                        }}
+                    }}
+                }}
+
+                if (!hasPixels) return null;
+
+                minX = Math.max(0, minX - 15);
+                minY = Math.max(0, minY - 15);
+                maxX = Math.min(canvas.width, maxX + 15);
+                maxY = Math.min(canvas.height, maxY + 15);
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = maxX - minX;
+                tempCanvas.height = maxY - minY;
                 
-                setTimeout(() => {{
-                    resText.innerText = "AI Recognition placeholder: Looks good! Continuing...";
-                    setTimeout(nextExercise, 1500);
-                }}, 800);
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = "white";
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, minX, minY, tempCanvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                return tempCanvas.toDataURL('image/png');
+            }}
+
+            async function recognize() {{
+                const dataUrl = getCroppedCanvas();
+                if (!dataUrl) {{
+                    alert("Please draw something first!");
+                    return;
+                }}
+
+                const resText = document.getElementById('resultText');
+                const btn = document.getElementById('recognizeBtn');
+                
+                resText.innerText = "Consulting the AI...";
+                resText.style.color = "#E56AB3";
+                btn.disabled = true;
+                
+                try {{
+                    const response = await fetch('/api/verify-writing', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ 
+                            image: dataUrl, 
+                            expected_character: practiceChars[currentCount - 1] 
+                        }})
+                    }});
+                    const data = await response.json();
+                    
+                    if (data.is_correct) {{
+                        resText.innerText = `Correct! AI Detected: ${{data.detected_character}}`;
+                        resText.style.color = "#4ade80";
+                        setTimeout(nextExercise, 1500);
+                    }} else {{
+                        resText.innerText = `Incorrect. AI Detected: ${{data.detected_character}}`;
+                        resText.style.color = "#f87171";
+                    }}
+                }} catch (e) {{
+                    resText.innerText = "Error contacting AI.";
+                    resText.style.color = "#f87171";
+                }} finally {{
+                    btn.disabled = false;
+                }}
             }}
             
             function nextExercise() {{
@@ -937,7 +1070,6 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
                     currentCount++;
                     updateProgress();
                     clearCanvas();
-                    document.getElementById('resultText').innerText = "";
                 }}
             }}
             

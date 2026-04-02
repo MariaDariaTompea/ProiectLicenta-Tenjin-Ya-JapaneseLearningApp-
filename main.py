@@ -4,6 +4,11 @@ from core.database import Base, engine
 from core.routes import router
 import os
 
+# Set Google Cloud credentials
+cred_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "google-credentials.json"))
+if os.path.exists(cred_path):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = cred_path
+
 # Import all models so their tables are created
 from features.user.models import User, UserProfile, UserPhoto, StatusLearning, UserItem  # noqa
 from features.customization.models import Achievement  # noqa

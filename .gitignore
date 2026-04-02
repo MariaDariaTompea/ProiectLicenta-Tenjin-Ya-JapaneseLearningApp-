@@ -35,5 +35,9 @@ build/
 customisableprofile/
 uploads/*
 # BUT track educational content folders:
+# Secondary folders
 !uploads/culture/
 !uploads/culturedocs/
+
+# Credentials
+google-credentials.json

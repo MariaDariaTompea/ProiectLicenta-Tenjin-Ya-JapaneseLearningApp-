@@ -219,3 +219,10 @@ graph TD
 - **Conversion**: Use `canvas.toDataURL()` to transform drawings into data blobs.
 - **AI Integration**: Design the backend to receive these blobs and pass them to either a pre-trained CNN (Convolutional Neural Network) or a lightweight recognition API to validate the user's writing correctly.
 
+### **Update 2nd April: Working AI Integration**
+We successfully implemented the AI Handwriting Validation pipeline!
+- **Integration Point**: The `/writing-exercise` canvas uses a Javascript bounding-box algorithm (`getCroppedCanvas`) to crop only the drawn pixels, optimizing the payload.
+- **Transport Mechanism**: Drawings are sent as base64-encoded PNG blobs over a JSON POST request to a new `/api/verify-writing` backend endpoint.
+- **AI Backend**: The backend is connected to the **Google Cloud Vision API**. It uses the `document_text_detection` algorithm with Japanese `language_hints=["ja"]`, which is highly effective for recognizing handwriting.
+- **Interaction Flow**: The canvas system now dynamically requests characters. The user draws, clicks "Recognize", and the Cloud Vision AI validates whether their handwriting matches the expected Kana or Kanji, providing instant color-coded feedback!
+- **Authentication Setup**: The Cloud Vision integration is fully securely authenticated via a service account key `google-credentials.json` kept at the project root, which is dynamically loaded as an environment variable when `main.py` boots up.
