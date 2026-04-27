@@ -830,19 +830,25 @@ def verify_writing(submission: WritingSubmission):
         client = vision.ImageAnnotatorClient()
         image = vision.Image(content=image_bytes)
         image_context = vision.ImageContext(language_hints=["ja"])
-        response = client.document_text_detection(image=image, image_context=image_context)
+        
+        # Use text_detection instead of document_text_detection for individual characters
+        response = client.text_detection(image=image, image_context=image_context)
         
         if response.error.message:
-            return {"is_correct": False, "detected_character": "Error reading image"}
+            return {"is_correct": False, "detected_character": f"Vision Error: {response.error.message}"}
             
         detected = ""
         if response.text_annotations:
+            # text_annotations[0] is the entire block of text found
             detected = response.text_annotations[0].description.strip()
             
-        is_correct = submission.expected_character in detected
+        # Clean up detected string (remove whitespace/newlines)
+        detected_clean = "".join(detected.split())
+        is_correct = submission.expected_character in detected_clean
+        
         return {
             "is_correct": is_correct,
-            "detected_character": detected if detected else "Nothing detected"
+            "detected_character": detected_clean if detected_clean else "Nothing detected"
         }
     except Exception as e:
         return {"is_correct": False, "detected_character": str(e)}
@@ -948,7 +954,7 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
                 ctx.lineWidth = 14;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#2d2d2d';
+                ctx.strokeStyle = '#000000';
                 ctx.lineTo(e.offsetX, e.offsetY);
                 ctx.stroke();
             }});
@@ -967,7 +973,7 @@ async def writing_exercise(system: str = "hiragana", count: int = 1):
                 const rect = canvas.getBoundingClientRect();
                 ctx.lineWidth = 14;
                 ctx.lineCap = 'round';
-                ctx.strokeStyle = '#2d2d2d';
+                ctx.strokeStyle = '#000000';
                 ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
                 ctx.stroke();
                 e.preventDefault();
@@ -3560,7 +3566,7 @@ async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
                 ctx.lineWidth = 14;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#2d2d2d';
+                ctx.strokeStyle = '#000000';
                 ctx.lineTo(e.offsetX, e.offsetY);
                 ctx.stroke();
             });
@@ -3580,7 +3586,7 @@ async def vocabulary_exercise_page(chapter_index: int, exercise_index: int):
                 const rect = canvas.getBoundingClientRect();
                 ctx.lineWidth = 14;
                 ctx.lineCap = 'round';
-                ctx.strokeStyle = '#2d2d2d';
+                ctx.strokeStyle = '#000000';
                 ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
                 ctx.stroke();
                 e.preventDefault();
