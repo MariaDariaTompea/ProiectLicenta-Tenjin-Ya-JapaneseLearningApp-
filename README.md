@@ -188,6 +188,8 @@ Access the application at `http://127.0.0.1:8000`.
 
 ---
 
+---
+
 ## 🌸 APRIL 2026 UPDATE: Roadmap & Goals
 
 This month, the development focus shifts from core architecture to content expansion and interactive AI features.
@@ -226,3 +228,24 @@ We successfully implemented the AI Handwriting Validation pipeline!
 - **AI Backend**: The backend is connected to the **Google Cloud Vision API**. It uses the `document_text_detection` algorithm with Japanese `language_hints=["ja"]`, which is highly effective for recognizing handwriting.
 - **Interaction Flow**: The canvas system now dynamically requests characters. The user draws, clicks "Recognize", and the Cloud Vision AI validates whether their handwriting matches the expected Kana or Kanji, providing instant color-coded feedback!
 - **Authentication Setup**: The Cloud Vision integration is fully securely authenticated via a service account key `google-credentials.json` kept at the project root, which is dynamically loaded as an environment variable when `main.py` boots up.
+
+---
+
+## 📅 MAY 2026 UPDATE: Expansion & Robustness
+
+Building upon the foundations of April, May focuses on content volume, offline accessibility, and polishing the user profile ecosystem.
+
+### **1. Writing System Completion**
+- **The Three Pillars**: Finalize all interactive features for the **Hiragana, Katakana, and Kanji** tables. This includes full stroke-order support, mnemonic triggers, and comprehensive recognition testing for every character set.
+
+### **2. Hybrid Connectivity: Offline & Online Modes**
+- **Persistent Learning**: Implement a robust **Offline Mode** utilizing local storage/caching, allowing users to continue their lessons without an active internet connection.
+- **Seamless Sync**: Develop an automated synchronization pipeline that pushes local progress to the Supabase cloud once connectivity is restored.
+
+### **3. Content Deep-Dive**
+- **Culture Expansion**: Author and integrate **5 new chapters** into the Culture module, expanding the "Scroll of Knowledge" with deep-dives into modern society and historical nuances.
+- **Core Curriculum**: Deploy a significant content patch adding **5 comprehensive exercises** to both the Grammar and Vocabulary modules (JLPT N5 focus), bringing more variety to daily study sessions.
+
+### **4. Profile & UI Polishing**
+- **Bug Squashing**: Conduct a full audit of the **User Profile** system. Resolve all reported issues regarding avatar synchronization, achievement display, and status tracking to ensure a seamless "Premium" feel across the dashboard.
+- **Aesthetic Refinement**: Continue fine-tuning micro-animations and transition states to maintain Tenjin'ya's high-end visual identity.

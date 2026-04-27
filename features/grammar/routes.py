@@ -40,14 +40,15 @@ async def welcome():
             }
             .bg-image.zoom { transform: scale(1.08); }
             .welcome-title {
-                color: #E56AB3;
-                font-family: 'Playfair Display', serif;
-                font-size: 120px;
                 text-align: center;
-                margin-top: 20vh;
-                letter-spacing: 2px;
-                font-weight: 700;
-                transition: transform 1s cubic-bezier(0.68,-0.55,0.27,1.55);
+                margin-top: 10vh;
+                transition: transform 1.2s cubic-bezier(0.68,-0.55,0.27,1.55), opacity 1s ease;
+            }
+            .welcome-title img {
+                max-width: 1100px;
+                width: 90%;
+                height: auto;
+                filter: drop-shadow(0 0 30px rgba(229, 106, 179, 0.4));
             }
             .slide-up { transform: translateY(-120vh); }
             .selection-table {
@@ -335,7 +336,9 @@ async def welcome():
     </head>
     <body>
         <div class="bg-image" id="bgImage"></div>
-        <div id="welcomeTitle" class="welcome-title">Welcome</div>
+        <div id="welcomeTitle" class="welcome-title">
+            <img src="/textures/Tenjinlogo.png" alt="Tenjin-Ya Logo">
+        </div>
 
         <div class="black-overlay" id="blackOverlay"></div>
 

@@ -1,1 +1,0 @@
-# Exercises feature package
