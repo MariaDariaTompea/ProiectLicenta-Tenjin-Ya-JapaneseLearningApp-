@@ -249,3 +249,25 @@ Building upon the foundations of April, May focuses on content volume, offline a
 ### **4. Profile & UI Polishing**
 - **Bug Squashing**: Conduct a full audit of the **User Profile** system. Resolve all reported issues regarding avatar synchronization, achievement display, and status tracking to ensure a seamless "Premium" feel across the dashboard.
 - **Aesthetic Refinement**: Continue fine-tuning micro-animations and transition states to maintain Tenjin'ya's high-end visual identity.
+
+---
+
+## 🎓 JUNE 2026 UPDATE: Bachelor Thesis Finalisation
+
+The final milestone for the summer focuses on content completion and platform-agnostic stability for the **Bachelor Thesis Presentation**.
+
+### **1. The Scroll of Knowledge: Complete Content**
+- **Cultural Storytelling**: Reach the milestone of **10 Cultural Stories**, fully illustrated and integrated with PDF reading materials.
+- **Advanced Curriculum**: Populate **2 full chapters** each for Vocabulary and Grammar, ensuring they are packed with diverse interactive exercises to demonstrate the system's scalability.
+- **Rewarding Mastery**: Implement specific **Achievements** tied to completing Culture stories and reading modules, rewarding curiosity and deep-learning.
+
+### **2. Innovative Kanji Puzzle Mechanic**
+- **Decomposition & Synthesis**: Introduce a unique **Kanji Puzzle System**. Users first learn to write foundational basic Kanji (radicals) and then interactively "snap" them together in a puzzle-like UI to form complex characters, reinforcing the logic of the writing system.
+
+### **3. Distribution & Independent Verification (Optional)**
+- **Portable Tenjin'ya**: Research and develop an **executable (.exe)** version of the application using PyInstaller or similar, allowing for local installation without a Python environment.
+- **Universal Flow**: Ensure that account creation, level progression, and profile management remain entirely independent and stable within the installed application, ready for a flawless live demonstration.
+
+---
+
+*“Evolution and justification through confidence and a well-crafted aesthetic: Tenjin'ya helps people achieve the results they wanted by solving the problems inherent in outdated platforms.”*
