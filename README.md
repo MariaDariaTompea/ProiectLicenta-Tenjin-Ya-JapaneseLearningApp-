@@ -4,7 +4,7 @@ Tenjin'ya is an advanced language learning application primarily designed for le
 
 ---
 
-## 🎨 1. Concept & Philosophy (Project Background)
+##  1. Concept & Philosophy (Project Background)
 
 ### 1.1 The Context of Language Learning Apps
 The rise of digital learning platforms like **Duolingo**, **HelloTalk**, and **Shinobi** has revolutionized language acquisition. Research (Kukulska-Hulme & Shield, 2008; Deterding et al., 2011) emphasizes that gamification and structured exercises significantly improve user engagement.
@@ -23,7 +23,7 @@ Through extensively testing multiple platforms and research into current trends,
 
 ---
 
-## 📊 2. Comparative Analysis
+##  2. Comparative Analysis
 
 The table below summarizes the key differences identified across the applications tested, highlighting the specific dimensions in which existing tools fall short and in which Tenjin'ya proposes a more complete solution.
 
@@ -37,7 +37,7 @@ The table below summarizes the key differences identified across the application
 
 ---
 
-## 🚀 3. The Tenjin'ya Solution (Vision & Innovations)
+##  3. The Tenjin'ya Solution (Vision & Innovations)
 
 Tenjin'ya introduces components absent from generic platforms to create a more authentic perspectives on the language:
 
@@ -54,13 +54,13 @@ Our culture module is split into two complementary branches:
 
 ---
 
-## 🎯 4. Project Scope: JLPT N5 Alignment
+##  4. Project Scope: JLPT N5 Alignment
 
 The primary implementation covers **JLPT N5**, the foundational level of the Japanese Language Proficiency Test. This includes all prerequisite vocabulary, grammar particles, and character knowledge required for a beginner. The application is architected for scalability, with future modules planned for N4 through N1.
 
 ---
 
-## 🏗️ 5. Technical Architecture
+##  5. Technical Architecture
 
 Tenjin'ya aims to bring innovation through a well-crafted aesthetic and modern tech stack.
 
@@ -88,7 +88,7 @@ To interact with the database efficiently, we use **SQLAlchemy**, a Python Objec
 
 ---
 
-## 📂 6. Modular Innovation: Vocabulary vs. Grammar
+##  6. Modular Innovation: Vocabulary vs. Grammar
 
 Most apps pick basic words and cycle them to teach grammar. Without auxiliary book support, users lack the choice to learn conversational vocabulary.
 **Tenjin'ya's Solution:** We separated the logic into two distinct modules:
@@ -114,7 +114,7 @@ Tenjin-ya prioritises a premium, aesthetic experience from the moment the user e
 
 ---
 
-## 🗄️ 7. Database & Exercise System
+##  7. Database & Exercise System
 
 ### **Database Structuring (March 2025)**
 ![Database Schema](docs/database_schema.png)
@@ -165,7 +165,7 @@ features/exercises/
 
 ---
 
-## 🎮 8. Getting Started
+##  8. Getting Started
 
 ### **Startup**
 The database schema is initialized automatically via `Base.metadata.create_all(bind=engine)`, creating tables if they do not exist.
@@ -177,7 +177,7 @@ Access the application at `http://127.0.0.1:8000`.
 
 ---
 
-## 📚 9. References & Research
+##  9. References & Research
 
 -   **Kukulska-Hulme, A., & Shield, L. (2008).** *An overview of mobile assisted language learning.* ReCALL Journal.
 -   **Deterding, S., Dixon, D., Khaled, R., & Nacke, L. (2011).** *From Game Design Elements to Gamefulness: Defining “Gamification”.*
@@ -231,7 +231,7 @@ We successfully implemented the AI Handwriting Validation pipeline!
 
 ---
 
-## 📅 MAY 2026 UPDATE: Expansion & Robustness
+## 🌸 MAY 2026 UPDATE: Expansion & Robustness
 
 Building upon the foundations of April, May focuses on content volume, offline accessibility, and polishing the user profile ecosystem.
 
